@@ -9,11 +9,15 @@ authors = [
     { name="Eric Harris", email="ericktheredd5875@gmail.com" }
 ]
 dependencies = [
+    "asyncio>=4.0.0",
     "loguru>=0.7.3",
     "rich>=14.1.0",
     "ruff>=0.12.9",
-    "typer>=0.16.1",
+    "typer[all]>=0.16.1",
 ]
+
+[project.scripts]
+dicerealms = "dicerealms.__main__:app"
 
 [project.urls]
 Homepage = "https://github.com/ericktheredd5875/dicerealms-python"
