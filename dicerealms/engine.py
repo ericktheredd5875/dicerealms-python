@@ -1,33 +1,82 @@
 # SPDX-License-Identifier: MIT
-from dicerealms.player import Player
+# dicerealms/engine.py
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from dicerealms.core import roll_dice
 
 
-class Engine:
-    def __init__(self, player: Player | None = None):
-        self.player = player or Player()
+@dataclass
+class Command:
+    name: str
+    help: str
+    handler: Callable[[list[str]], str]
 
-    def handle(self, line: str) -> str:
-        cmd = line.strip()
-        if not cmd:
-            return ""
 
-        parts = cmd.split(maxsplit=1)
-        verb = parts[0].lower()
-        arg = parts[1] if len(parts) > 1 else ""
+class GameEngine:
+    """
+    A minimal, synchronous REPL-like game engine.
+    Commands:
+        - help
+        - roll <dice>
+        - look
+        - quite
+    """
 
-        if verb in {"quit", "exit"}:
-            return "__QUIT__"
+    def __init__(
+        self,
+        input_fn: Callable[[], str] | None = None,
+        output_fn: Callable[[str], None] | None = None,
+    ):
+        self._running = False
+        self._input = input_fn or (lambda: input("> "))
+        self._output = output_fn or print
+        self._commands: dict[str, Command] = {
+            "help": Command("help", "Show Command List", self._cmd_help),
+            "roll": Command("roll", "Roll dice: roll 2d6+1", self._cmd_roll),
+            "look": Command("look", "Look around the current room", self._cmd_look),
+            "quit": Command("quit", "Quit the game", self._cmd_quit),
+        }
 
-        if verb == "look":
-            return (
-                f"You are in {self.player.room}. You see a fountain and a notice board."
-            )
+    def run(self):
+        self._running = True
+        self._output("🎲 Entering DiceRealms. Type 'help' for commands; 'quit' to exit.")
+        while self._running:
+            raw = self._input().strip()
+            if not raw:
+                continue
 
-        if verb == "say":
-            text = arg or "(you say nothing)"
-            return f'You say: "{text}"'
+            parts = raw.split()
+            cmd, args = parts[0].lower(), parts[1:]
+            handler = self._commands.get(cmd)
+            if handler:
+                try:
+                    msg = handler.handler(args)
+                except Exception as e:  # Keep REPL alive
+                    msg = f"⚠️  Error: {e}"
+            else:
+                msg = f"Unknown command: {cmd} (try 'help')"
 
-        if verb == "help":
-            return "Commands: look, say <words>, help, quit"
+            self._output(msg)
 
-        return f"I don't understand '{cmd}'. Try 'help'."
+    # ---- command handlers ----
+    def _cmd_help(self, _: list[str]) -> str:
+        rows = [f"{c.name:<8} {c.help}" for c in self._commands.values()]
+        return "Commands:\n" + "\n".join(rows)
+
+    def _cmd_roll(self, args: list[str]) -> str:
+        if not args:
+            return "Usage: roll <dice-expr> (e.g. 2d6+1)"
+
+        total, parts = roll_dice(args[0])
+        return f"{args[0]} -> {total} (Parts: {parts})"
+
+    def _cmd_look(self, _: list[str]) -> str:
+        # TODO: Implement room description and connect world state
+        return "You are in a dark room. There is a table with a map on it. Exits: north, east."
+
+    def _cmd_quit(self, _: list[str]) -> str:
+        self._running = False
+        return "👋 Goodbye!"

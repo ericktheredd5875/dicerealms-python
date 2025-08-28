@@ -1,8 +1,10 @@
-# 🎲 DiceRealms
+# 🎲 DiceRealms (Python)
 
 **DiceRealms** is a modern, multiplayer MUD-style roleplaying platform using a structured protocol inspired by classic MUDs and tabletop RPGs like Dungeons & Dragons.
 
 Built from the ground up to support immersive text-based storytelling, structured MCP commands, and group-based roleplaying adventures — DiceRealms lets you emote, speak, roll, and act in shared virtual spaces.
+
+This project is in active development. Current milestone: **M1 — Core Foundations**.
 
 ---
 <!-- [![codecov](https://codecov.io/gh/ericktheredd5875/dicerealms/graph/badge.svg?token=8Q1IB3P0UL)](https://codecov.io/gh/ericktheredd5875/dicerealms) -->
@@ -22,50 +24,85 @@ Built from the ground up to support immersive text-based storytelling, structure
 
 ### Prerequisites
 
-* ??
+* Python 3.13
 * Git
+* uv 
 * (Optional) Telnet or netcat for testing
 
 ### Clone and Run
 
-???
+```bash
+git clone https://github.com/yourname/dicerealms-python.git
+cd dicerealms-python
+uv venv
+uv pip install -e .
 
-### Connect to the Server
+# Run the Game:
+uv run dicerealms start
 
-In another terminal:
+# Example Usage
+dicerealms
+🎲 Welcome to DiceRealms!
+Type 'help' for commands.
 
-<!-- ```bash
-telnet localhost 4000
-# OR
-nc localhost 4000
-``` -->
+> roll 2d6+1
+2d6+1 → 9 (parts: [3, 5])
 
-Then try:
+> look
+You are in a dimly lit hall. Exits: north, east.
 
-```text
-#$#mcp-emote: text="draws his sword"
-#$#mcp-say: text="We must be ready!"
-#$#mcp-roll: dice="1d20+3" reason="Perception"
-#$#mcp-help
+> quit
+Goodbye, adventurer! 👋
+
+```
+
+### 🧪 Development
+
+```bash
+# Run Tests
+uv run pytest
+
+# Lint and Format
+uv run ruff check .
+uv run ruff format .    
+
 ```
 
 ---
 
-## 🥪 Running Tests
+### Connect to the Server
 
-```bash
-???
-```
+To Come
 
 ---
 
 ## 📂 Project Structure
 
-```
-cmd/server/        → Main entrypoint
-internal/server/   → TCP server, connection handling
-internal/game/     → Player, room, dice logic
-internal/mcp/      → MCP tag parsing
+```Bash
+dicerealms-python/
+├── dicerealms/       # Main package
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── core.py       # Dice and core utilities
+│   ├── player.py     # Player representation
+│   ├── world.py      # World placeholders
+│   ├── engine.py     # Game loop
+│   └── session.py    # Player session orchestration
+├── examples/
+│   └── quickstart.py
+├── tests/
+│   └── test_core.py
+├── docs/
+│   ├── milestones/
+│   │   ├── M1.md
+│   │   ├── M2.md
+│   │   └── ...
+│   └── PROJECT_STATE.md
+├── ROADMAP.md
+├── MILESTONES.md
+├── pyproject.toml
+├── LICENSE
+└── README.md
 ```
 
 ---
@@ -82,32 +119,7 @@ an explicit patent grant if that becomes relevant.
 
 ## 🧠 Future Roadmap
 
-* [ ] Player commands: ~~`look`~~, ~~`move`~~, ~~`inventory`~~
-* [ ] DM tools: `mcp-narrate`, scene control
-* [ ] WebSocket/Discord client
-* [ ] Persistent storage with PostgreSQL
-* [ ] AI-driven NPCs and dynamic storytelling
-* [ ] Split command descriptions into a dedicated map for maintainability.
-* [ ] Add mcp-help: command="mcp-roll" to explain individual commands in detail.
-* [ ] Let DMs define custom help menus for their sessions.
-* [ ] More Look-like commands (examine, scene, etc.).
-* [ ] Add mcp-ooc for out-of-character speech.
-* [ ] Support speech tags like volume="shout" → shouts, mutters, etc.
-* [ ] Auto-prompt players with mcp-say: text="" if they type untagged input.
-* [ ] Restrict narrate to DM-role players.
-* [ ] Allow styled moods (e.g., tense, calm).
-* [ ] Store narration logs by scene or timestamp.
-* [ ] Stats: show a reminder of how to improve them later.
-* [ ] mcp-stat-reset for DM use
-* [ ] Password or public key auth
-* [ ] Player authentication (tie SSH login to in-game identity)
-* [ ] Session logging
-* [ ] Multiple ports (e.g., 4000 for Telnet, 2222 for SSH)
-* [ ] Color support (many SSH clients are ANSI-capable!)
-* [ ] Store login history in DB (LoginAuditModel)
-* [ ] Detect duplicate IPs
-* [ ] Track duration of session
-* [ ] Rate-limit brute force attempts (via firewall or middleware)
+See [Roadmap](./ROADMAP.md) or [Milestones](./MILESTONES.md)
 
 ---
 

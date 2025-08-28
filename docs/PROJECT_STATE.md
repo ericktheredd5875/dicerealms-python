@@ -17,6 +17,7 @@ dicerealms-python/
 ├── dicerealms/             # Main package source
 │   ├── __init__.py
 │   ├── __main__.py         # Current Entry point for the game.
+│   ├── cli.py              # CLI Entry point for the game.
 │   ├── console_frontend.py # A simple console frontend.
 │   ├── core.py             # Core game logic (dice rolling, realms, etc.)
 │   ├── player.py           # Player, character, inventory
@@ -29,7 +30,8 @@ dicerealms-python/
 │
 ├── tests/                  # Unit tests
 │   ├── __init__.py
-│   └── test_core.py
+│   ├── test_core.py
+│   └── test_engine.py
 │
 ├── docs/                   # Various documents
 │   ├── milestones
@@ -56,10 +58,19 @@ dicerealms-python/
 
 ## Modules & Responsibilities
 
+### dicerealms/cli.py
+- **Purpose:** CLI Entry Point with Commands
+- **Functions:**
+  - `new()` – Starts a New Game.
+  - `start()` – Starts the Game Engine.
+  - `hello(name: str)` – Generic entry point.
+  - `roll(expr: str)` – Do a dice roll.
+- **Notes:** 
+
 ### dicerealms/core.py
 - **Purpose:** Core mechanics (dice rolls, randomization utilities).
 - **Functions:**
-  - `roll_dice(dice: str) -> int` – roll dice uses regex ("(\d+)d(\d+)") to parse dice type and quantity.
+  - `roll_dice(dice: str) -> tuple[int, list[int]]` – roll dice uses regex to parse dice type and quantity.
 - **Notes:** Utility functions, stateless.
 
 ### dicerealms/console_frontend.py
@@ -91,11 +102,19 @@ dicerealms-python/
 - **Notes:** Placeholder world now, will expand in M2 & M4.
 
 ### dicerealms/engine.py
-- **Purpose:** Orchestrates basic command handling.
+- **Purpose:** Orchestrates basic command handling. A minimal, synchronous REPL-like game engine.
 - **Classes:**
-  - `Engine`
-    - `__init__(player: Player | None = None)`
-    - `handle(line: str) -> str`
+  - `Command`: dataclass
+    - `name: str`
+    - `help: str`
+    - `handler: Callable[[list[str]], str]`
+  - `GameEngine`
+    - `__init__(input_fn: Callable[[], str] | None, output_fn: Callable[[str], None] | None)`
+    - `run()`
+    - `_cmd_help(self, _: list[str]) -> str`
+    - `_cmd_roll(self, args: list[str]) -> str`
+    - `_cmd_look(self, _: list[str]) -> str`
+    - `_cmd_quit(self, _: list[str]) -> str`
 - **Notes:** Will eventually split into networking vs CLI engines.
 
 ### dicerealms/session.py
@@ -125,6 +144,7 @@ dicerealms-python/
 
 ## Testing
 - `tests/test_core.py` → covers dice rolling.
+- `tests/test_engine.py` → covers base engine functionality.
 - Future: add `tests/test_player.py`, `tests/test_world.py`.
 
 ---
@@ -133,7 +153,7 @@ dicerealms-python/
 - Framework: **Typer**
 - Command entrypoint: `python -m dicerealms`
 - Current commands:
-  - `play` → starts the local game loop
+  - `help`, `roll <expr>`, `look`, `quit`
 - Planned/Upcoming commands:
   - `server` → run server for multiplayer
   - `connect` → connect via WebSocket
@@ -148,8 +168,8 @@ Planned options: WebSocket (primary), Telnet (optional).
 ---
 
 ## Milestones
-- **M1:** Basic single-player loop with dice rolling + room navigation  
-- **M2:** Multiplayer support (WebSocket server)  
+- **M1:** ✅ Basic single-player loop with dice rolling + room navigation  
+- **M2:** 🚀 Expand gameplay basics (navigation, actions, and command parser)  
 - **M3:** Persistence (saving characters/world state)  
 - **M4:** Advanced features (combat, NPCs, items, etc.)
 
@@ -164,6 +184,9 @@ Planned options: WebSocket (primary), Telnet (optional).
 
 ## Recent Changes
 _A running log to avoid confusion between sessions. Add newest entries at the top._
+
+- **2025-08-28** — Concluded `M1`. Added functional CLI, dice rolling, player/world placeholders, engine loop, and tests. Updated `README` with Quickstart. Logged changes in `CHANGES.md`. Moved project focus to `M2` (navigation, actions, parser expansion).
+  _Author:_ Eric Harris
 
 - **2025-08-28** — Created `PROJECT_STATE.md` with sections for structure, modules, CLI, networking, milestones, and conventions; added **Recent Changes** section. Made sure all file structure was currently active and the **Modules & Responsibilities** section has an accurate break down of what each file does currently, with method/function signatures.  
   _Author:_ Eric Harris
@@ -187,7 +210,7 @@ _A running log to avoid confusion between sessions. Add newest entries at the to
 ## Refresh Cheatsheet (for quick context in chat)
 - Paste this one-liner to recap focus:
   ```
-  Current focus: M1 — single-player loop (dice + rooms); package dir: dicerealms; CLI: python -m dicerealms play
+  Current focus: M2 — expand gameplay basics (navigation, actions, parser); package dir: dicerealms; CLI: python -m dicerealms
   ```
 - Paste a short tree dump when structure matters:
   ```

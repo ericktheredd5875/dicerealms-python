@@ -3,9 +3,9 @@
 ## M1 – Core Foundations
 - [x] Project scaffolding (`dicerealms/`, tests/, examples/, pyproject.toml, README, license)  
 - [x] Core game logic (dice rolls, player, world basics)  
-- [ ] CLI startup command (`python -m dicerealms`) fixed and functional  
-- [ ] Basic game loop with command input/output  
-- [ ] Unit tests for `core.py`, `player.py`, `world.py`  
+- [x] CLI startup command (`python -m dicerealms`) fixed and functional  
+- [x] Basic game loop with command input/output  
+- [x] Unit tests for `core.py`, `player.py`, `world.py`  
 
 ➡️ [View details in `M1.md`](./docs/milestones/M1.md)
 

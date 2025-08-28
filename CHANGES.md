@@ -12,6 +12,21 @@ For high-level project state and structure, see `PROJECT_STATE.md`.
 
 ---
 
+## [2025-08-28] — Milestone 1 Complete 🎉
+- Finished package scaffolding (`dicerealms/`, tests, examples).
+- Implemented core dice rolling system (`core.py`).
+- Added player structure placeholder (`player.py`).
+- Added world placeholder (`world.py`).
+- Added basic game loop in `engine.py` with commands: `help`, `roll`, `look`, `quit`.
+- Functional CLI via `python -m dicerealms` and `dicerealms` script.
+- Added pytest unit tests for core functions.
+- Updated README with Quickstart instructions.
+- Created `examples/quickstart.py`.
+
+_This concludes M1. Next: M2 — navigation, actions, and command parser._
+
+---
+
 ## 2025-08-28
 - **Added:** `PROJECT_STATE.md` with sections for structure, modules, CLI, networking, milestones, conventions, and recent changes.
 - **Setup:** Created `CHANGES.md` template for tracking future updates.

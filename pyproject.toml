@@ -17,7 +17,8 @@ dependencies = [
 ]
 
 [project.scripts]
-dicerealms = "dicerealms.__main__:app"
+dicerealms = "dicerealms.cli:app"
+dicerealms-old = "dicerealms.__main__:app"
 
 [project.urls]
 Homepage = "https://github.com/ericktheredd5875/dicerealms-python"
@@ -25,6 +26,7 @@ Homepage = "https://github.com/ericktheredd5875/dicerealms-python"
 [dependency-groups]
 dev = [
     "black>=25.1.0",
+    "pyright>=1.1.404",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "pytest-pretty>=1.3.0",
@@ -36,19 +38,28 @@ dev = [
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-[tool.ruff]
-line-length = 88
-target-version = "py313"
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["."]
+testpaths = ["tests"]
 
-[tool.ruff.lint]
-# Enable commonly useful rules
-select = [
-    "E",  # pycodestyle errors
-    "F",  # pyflakes
-    "I",  # import sorting
-    "B",  # bugbear
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+lint.select = ["E","F","I","UP","B"]
+exclude = [
+    "**/tests",
 ]
 
-ignore = [
+#[tool.ruff.lint]
+# Enable commonly useful rules
+#select = [
+#    "E",  # pycodestyle errors
+#    "F",  # pyflakes
+#    "I",  # import sorting
+#    "B",  # bugbear
+#]
+
+lint.ignore = [
     "E501",  # line length handled by formatter
 ]

@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
 import asyncio
-import sys
 
 from dicerealms.console_frontend import ConsoleFrontend
 
