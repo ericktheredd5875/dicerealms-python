@@ -62,10 +62,9 @@ jobs:
           pip install -e .
           pip install pytest pytest-cov
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          pytest -q --maxfail=1 --disable-warnings \
-            --cov=dice_realms --cov-report=term-missing --cov-report=xml
+          pytest --cov=dicerealms --cov-report=xml
 
       - name: Upload coverage artifact
         uses: codecov/codecov-action@v5
@@ -73,5 +72,11 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ericktheredd5875/dicerealms-python
           flags: unittests
-          name: coverage-xml
-          path: coverage.xml
+          # name: coverage-xml
+          # path: coverage.xml
+          verbose: true
+          fail_ci_if_error: true
+          # file: coverage.xml
+          env_vars: CODECOV_TOKEN
+          # env_vars_action: set
+          # env_vars_action: set
