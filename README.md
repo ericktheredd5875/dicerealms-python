@@ -7,7 +7,10 @@ Built from the ground up to support immersive text-based storytelling, structure
 This project is in active development. Current milestone: **M1 — Core Foundations**.
 
 ---
-<!-- [![codecov](https://codecov.io/gh/ericktheredd5875/dicerealms/graph/badge.svg?token=8Q1IB3P0UL)](https://codecov.io/gh/ericktheredd5875/dicerealms) -->
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![Status: In Development](https://img.shields.io/badge/status-alpha-orange)
+[![codecov](https://codecov.io/gh/ericktheredd5875/dicerealms-python/graph/badge.svg?token=579MCVZ7P3)](https://codecov.io/gh/ericktheredd5875/dicerealms-python)
 ---
 
 ## 👩‍👨 Features
