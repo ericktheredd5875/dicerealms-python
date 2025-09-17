@@ -14,16 +14,17 @@ Future-ready (not required for M2):
 - Zones/realms, procedural generation hooks
 - Pathfinding helpers (basic BFS now; A* later if needed)
 """
+
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple
 
 # canonical lowercase strings: "north", "east", "south", "west", "up", "down"
 Direction = str
 
 # Opposite direction mapping for convenience when creating bidirectional exits
-OPPOSITE: Dict[Direction, Direction] = {
+OPPOSITE: dict[Direction, Direction] = {
     "north": "south",
     "south": "north",
     "east": "west",
@@ -62,7 +63,7 @@ class Room:
     id: str
     name: str
     description: str = ""
-    exits: Dict[Direction, Exit] = field(default_factory=dict)
+    exits: dict[Direction, Exit] = field(default_factory=dict)
 
     def add_exit(
         self,
@@ -75,7 +76,7 @@ class Room:
         d = direction.lower()
         self.exits[d] = Exit(to_room=to_room, description=description, locked=locked)
 
-    def neighbor(self) -> Dict[Direction, str]:
+    def neighbor(self) -> dict[Direction, str]:
         return {d: ex.to_room for d, ex in self.exits.items() if not ex.locked}
 
 
@@ -92,7 +93,7 @@ class World:
 
     def __init__(self, *, title: str = "DiceRealms") -> None:
         self.title = title
-        self._rooms: Dict[str, Room] = {}
+        self._rooms: dict[str, Room] = {}
 
     # --- Mutation ---
     def add_room(self, room: Room) -> None:
@@ -116,7 +117,7 @@ class World:
         description: str | None = None,
         back_description: str | None = None,
         locked: bool = False,
-        back_locked: Optional[bool] = None,
+        back_locked: bool | None = None,
     ) -> None:
         """
         Create an exit from a -> b; optionally also b -> a using the opposite direction.
@@ -148,13 +149,13 @@ class World:
         except KeyError:
             raise KeyError(f"Room not found: {room_id}") from None
 
-    def current_room(self, room_id: str) -> Optional[Room]:
+    def current_room(self, room_id: str) -> Room | None:
         return self._rooms.get(room_id)
 
     def look(self, room_id: str) -> str:
         room = self.require_room(room_id)
-        lines: List[str] = [room.name, "", room.description.strip()]
-        exits = room.neighbors()
+        lines: list[str] = [room.name, "", room.description.strip()]
+        exits = room.neighbor()
 
         if exits:
             pretty = ", ".join(sorted(exits.keys()))
@@ -164,10 +165,10 @@ class World:
 
         return "\n".join(lines).strip()
 
-    def neighbors(self, room_id: str) -> Dict[Direction, str]:
-        return self.require_room(room_id).neighbors()
+    def neighbors(self, room_id: str) -> dict[Direction, str]:
+        return self.require_room(room_id).neighbor()
 
-    def move(self, room_id: str, direction: Direction) -> Tuple[Optional[str], str]:
+    def move(self, room_id: str, direction: Direction) -> tuple[str | None, str]:
         d = direction.lower()
         room = self.require_room(room_id)
         ex = room.exits.get(d)
@@ -175,13 +176,16 @@ class World:
             return None, f"You can't go {d}."
 
         if ex.locked:
-            return None, f"That way is locked."
+            return None, f"{d} is locked."
 
         dest = self.require_room(ex.to_room)
         return dest.id, f"You move {d} to {dest.name}."
 
+    def rooms(self) -> Iterable[Room]:
+        return self._rooms.values()
+
     # --- Pathfinding (simple BFS for now) ---
-    def find_path(self, start_id: str, goal_id: str) -> Optional[List[str]]:
+    def find_path(self, start_id: str, goal_id: str) -> list[str] | None:
         if start_id == goal_id:
             return [start_id]
 
@@ -191,14 +195,14 @@ class World:
         from collections import deque
 
         q = deque([start_id])
-        come_from: Dict[str, Optional[str]] = {start_id: None}
+        come_from: dict[str, str | None] = {start_id: None}
         while q:
             cur = q.popleft()
             for nxt in self.neighbors(cur).values():
                 if nxt not in come_from:
                     come_from[nxt] = cur
                     if nxt == goal_id:
-                        path: List[str] = [nxt]
+                        path: list[str] = [nxt]
                         while cur is not None:
                             path.append(cur)
                             cur = come_from[cur]
@@ -208,7 +212,7 @@ class World:
         return None
 
     # --- Serialization helpers (for M3) ---
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "title": self.title,
             "rooms": [
@@ -230,14 +234,13 @@ class World:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> World:
+    def from_dict(cls, data: dict) -> World:
         w = cls(title=data.get("title", "DiceRealms"))
         for rdata in data.get("rooms", []):
             r = Room(
                 id=rdata["id"],
-                name=rdata.get(
-                    "name", rdata["id"], description=rdata.get("description", "")
-                ),
+                name=rdata.get("name", rdata["id"]),
+                description=rdata.get("description", ""),
             )
             for d, ex in rdata.get("exits", {}).items():
                 r.add_exit(

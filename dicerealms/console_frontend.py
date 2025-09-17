@@ -37,10 +37,10 @@ class ConsoleFrontend:
             try:
                 line = await loop.run_in_executor(None, sys.stdin.readline)
             except (KeyboardInterrupt, EOFError):
-                line = "quite\n"
+                line = "quit\n"
 
             if not line:  # EOF
-                line = "quite\n"
+                line = "quit\n"
 
             # Strip trailing newlines but preserve an empty command as "".
             clean = line.strip("\r\n")
@@ -48,7 +48,7 @@ class ConsoleFrontend:
             if clean.lower() in {"quit", "exit"}:
                 break
 
-            self._write("> (HOWDY)")
+            self._write("> ")
 
     async def run(self):
         await self.start()

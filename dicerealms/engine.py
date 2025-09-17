@@ -22,7 +22,7 @@ class GameEngine:
         - help
         - roll <dice>
         - look
-        - quite
+        - quit
     """
 
     def __init__(
@@ -60,6 +60,26 @@ class GameEngine:
                 msg = f"Unknown command: {cmd} (try 'help')"
 
             self._output(msg)
+
+    def handle(self, line: str) -> str:
+        """Handle a single command line and return the response."""
+        if not line.strip():
+            return ""
+
+        parts = line.split()
+        cmd, args = parts[0].lower(), parts[1:]
+        handler = self._commands.get(cmd)
+
+        if handler:
+            try:
+                result = handler.handler(args)
+                if cmd == "quit":
+                    return "__QUIT__"
+                return result
+            except Exception as e:
+                return f"⚠️  Error: {e}"
+        else:
+            return f"Unknown command: {cmd} (try 'help')"
 
     # ---- command handlers ----
     def _cmd_help(self, _: list[str]) -> str:

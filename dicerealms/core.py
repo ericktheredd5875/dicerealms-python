@@ -16,13 +16,14 @@ def roll_dice(dice: str) -> tuple[int, list[int]]:
 
     m = _DICE_RE.match(dice)
     if not m:
-        raise ValueError("Invalid dice format: {expr!r}")
+        raise ValueError(f"Invalid dice format: {dice!r}")
 
     count, sides, mod = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
     if count <= 0 or sides <= 1:
         raise ValueError(f"Dice must be NdS with N>0 and S>1: {dice!r}")
 
-    rolls = [random.randint(1, sides) for _ in range(count)]
+    # Applied 'nosec' to random since this is a simple random number generator.
+    rolls = [random.randint(1, sides) for _ in range(count)]  # nosec
     total = sum(rolls)
     if mod:
         total += mod

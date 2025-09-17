@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 import asyncio
 
-from dicerealms.engine import Engine
+from dicerealms.engine import GameEngine
 
 
 class GameSession:
@@ -11,7 +11,7 @@ class GameSession:
     """
 
     def __init__(self, write_callback):
-        self.engine = Engine()
+        self.engine = GameEngine()
         self.incoming: asyncio.Queue[str] = asyncio.Queue()
         self.write = write_callback
         self._task: asyncio.Task | None = None
