@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets import ServerConnection
 
 from dicerealms.server.server import GameServer
 
@@ -21,7 +21,7 @@ def server():
 @pytest.fixture
 def mock_websocket():
     """Create a mock WebSocket for testing."""
-    ws = AsyncMock(spec=WebSocketServerProtocol)
+    ws = AsyncMock(spec=ServerConnection)
     ws.send = AsyncMock()
     return ws
 

@@ -38,16 +38,19 @@ class GameState:
         Initialize the game world with starting rooms.
         """
         self.rooms["Town Square"] = Room(
+            room_id="100",
             name="Town Square",
             description="A bustling town square with a fountain in the center.",
             exits={"north": "Market", "east": "Tavern"}
         )
         self.rooms["Market"] = Room(
+            room_id="101",
             name="Market",
             description="A busy marketplace with various stalls.",
             exits={"south": "Town Square"}
         )
         self.rooms["Tavern"] = Room(
+            room_id="102",
             name="Tavern",
             description="A cozy tavern with a warm fireplace.",
             exits={"west": "Town Square"}

@@ -8,11 +8,9 @@ authors = [
     { name="Eric Harris", email="ericktheredd5875@gmail.com" }
 ]
 dependencies = [
-    "asyncio>=4.0.0",
     "loguru>=0.7.3",
     "prompt-toolkit>=3.0.52",
     "rich>=14.1.0",
-    "ruff>=0.12.9",
     "typer>=0.20.0",
     "websockets>=15.0.1",
 ]

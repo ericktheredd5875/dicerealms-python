@@ -2,12 +2,14 @@
 Websocket server for DiceRealms.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 
 import websockets
 from loguru import logger
-from websockets.server import WebSocketServerProtocol
+from websockets import ServerConnection
 
 #from dicerealms.protocol.messages import ActionMessage, ChatMessage, ConnectMessage
 from dicerealms.server.turn_manager import TurnManager
@@ -21,12 +23,12 @@ class GameServer:
     def __init__(self, host: str = "localhost", port: int = 8765):
         self.host  = host
         self.port = port
-        self.connected_clients: dict[str, WebSocketServerProtocol] = {}
+        self.connected_clients: dict[str, ServerConnection] = {}
         self.player_names: dict[str, str] = {}
         self._next_player_id = 1
         self.turn_manager = TurnManager()
 
-    async def handle_client(self, websocket: WebSocketServerProtocol, path: str = None):
+    async def handle_client(self, websocket: ServerConnection, path: str | None = None):
         """
         Handle a new client connection.
         """
@@ -214,5 +216,5 @@ class GameServer:
         Start the Websocket Server.
         """
         logger.info(f"Starting DiceRealms server on {self.host}:{self.port}")
-        async with websockets.serve(self.handle_client, self.host, self.port):
+        async with serve(self.handle_client, self.host, self.port):
             await asyncio.Future() # Run forever

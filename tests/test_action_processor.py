@@ -63,6 +63,7 @@ class TestActionProcessor:
         turn_manager.add_player(player_id)
         
         result = await action_processor.process_action(player_id, "roll", ["1d6"])
+        print(result)
         
         assert result["success"] is False
         assert "not your turn" in result["error"].lower()
@@ -71,16 +72,20 @@ class TestActionProcessor:
     async def test_process_action_roll_dice(self, action_processor, game_state, turn_manager, broadcast_callback):
         """Test processing a roll dice action."""
         player_id = "player_1"
+        other_player = "player_2"
+        
         game_state.add_player(player_id, "Alice")
+        game_state.add_player(other_player, "Bob")
         turn_manager.add_player(player_id)
+        turn_manager.add_player(other_player)
         
         result = await action_processor.process_action(player_id, "roll", ["2d6"])
         
         # Should broadcast action announcement and result
         assert broadcast_callback.call_count >= 2
         
-        # Check that turn was advanced
-        assert turn_manager.get_current_player() is None or turn_manager.get_current_player() != player_id
+        # Check that turn was advanced to the next player
+        assert turn_manager.get_current_player() == other_player
 
     @pytest.mark.asyncio
     async def test_process_action_delay(self, action_processor, game_state, turn_manager, broadcast_callback):
