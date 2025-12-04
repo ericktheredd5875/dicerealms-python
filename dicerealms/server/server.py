@@ -135,7 +135,7 @@ class GameServer:
             return
 
         # Start action - check if turn action can start
-       if not self.turn_manager.start_turn_action(player_id):
+        if not self.turn_manager.start_turn_action(player_id):
             await self.send_to_client(player_id, {
                 "type":"error",
                 "message": "Cannot start action: turn action already in progress or not your turn."
