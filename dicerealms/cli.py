@@ -1,49 +1,88 @@
-# SPDX-License-Identifier: MIT
-# dicerealms/cli.py
-from __future__ import annotations
+
+"""
+CLI Commands for DiceRealms.
+"""
+
+import asyncio
 
 import typer
+from loguru import logger
+from rich.console import Console
+from rich.panel import Panel
 
-from dicerealms.core import roll_dice
-from dicerealms.engine import GameEngine
+from dicerealms.server.server import GameServer
 
-app = typer.Typer(help="DiceRealms – a D&D-style, terminal-first adventure. ✨")
-
-_engine: GameEngine | None = None
-
-
-@app.command()
-def new():
-    """Start a fresh game session in memory."""
-    global _engine
-    _engine = GameEngine()
-    typer.echo("🧙 New game created. Type 'start' to begin.")
+#from typing import Optional
 
 
-@app.command()
-def start():
-    """Enter the interactive game loop."""
-    global _engine
 
-    if _engine is None:
-        _engine = GameEngine()
+app = typer.Typer(
+    help="DiceRealms CLI -- a multiplayer, turn-based, dice-driven fantasy RPG ✨",
+    add_completion = False,
+)
 
-    typer.echo("🎲 Entering DiceRealms. Type 'help' for commands; 'quit' to exit.")
-    _engine.run()
-
+console = Console()
 
 @app.command()
-def hello(name: str = typer.Argument(..., help="Name of the person to greet")):
-    """Say hello to someone"""
-    typer.echo(f"Hello {name}!")
+def server(
+    host: str = typer.Option("localhost", "--host", "-h",  help="Host to bind the server to."),
+    port: int = typer.Option(8765, "--port", "-p", help="Port to bind the server to.")
+) -> None:
+    """
+    Start the DiceRealms multiplayer server.
 
+    Example:
+        dicerealms server --host 0.0.0.0 --port 8765
+    """
 
+    console.print(
+        Panel.fit(
+            f"[bold cyan]🎲 DiceRealms Server[/bold cyan]\n"
+            f"Starting on [bold]{host}:{port}[/bold]\n",
+            border_style="bright_cyan",
+        )
+    )
+
+    # Create and run the server
+    game_server = GameServer(host=host, port=port)
+
+    try:
+        # Run the async server
+        asyncio.run(game_server.run())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]👋 Server shutting down...[/yellow]")
+        logger.info("Server stopped by user")
+    except Exception as e:
+        console.print(f"[bold red]❌ Server error:[/bold red] {e}")
+        logger.error(f"Server error: {e}")
+        raise typer.Exit(code=1)  from None
+    
 @app.command()
-def roll(expr: str = typer.Argument("1d6", help="Dice expression like 2d6+1")):
-    """Roll some dice, e.g. 2d6 or 1d20"""
-    total, parts = roll_dice(expr)
-    typer.echo(f"{expr} -> {total} (Parts: {parts})")
+def connect(
+    host: str = typer.Option("localhost", "--host", "-h",  help="Host to connect to."),
+    port: int = typer.Option(8765, "--port", "-p", help="Port to connect to."),
+    name: str = typer.Option("Player", "--name", "-n", help="Player name."),
+) -> None:
+    """
+    Connect to a DiceRealms server as a client.
 
+    Example:
+        dicerealms connect --host localhost --port 8765 --name Alice
+    """
+
+    console.print(
+        Panel.fit(
+            f"[bold green]🎲 DiceRealms Client[/bold green]\n"
+            f"Connecting to [bold]{host}:{port}[/bold]\n"
+            f"Player name: [bold]{name}[/bold]\n",
+            border_style="green",
+        )
+    )
+
+    # TODO: implement client connection
+    console.print("[yellow]🔗 Client connection not yet implemented.[/yellow]")
+    console.print("[dim]Coming soon in M3![/dim]")
 
 if __name__ == "__main__":
     app()
+
