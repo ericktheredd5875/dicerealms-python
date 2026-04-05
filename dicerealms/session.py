@@ -2,7 +2,8 @@
 import asyncio
 
 from dicerealms.engine import GameEngine
-
+from dicerealms.world import load_default_world
+from dicerealms.player import Player
 
 class GameSession:
     """
@@ -11,7 +12,10 @@ class GameSession:
     """
 
     def __init__(self, write_callback):
-        self.engine = GameEngine()
+        self.player = Player()
+        self.world = load_default_world()
+
+        self.engine = GameEngine(world=self.world, player=self.player)
         self.incoming: asyncio.Queue[str] = asyncio.Queue()
         self.write = write_callback
         self._task: asyncio.Task | None = None
@@ -19,6 +23,7 @@ class GameSession:
 
     async def start(self):
         self.write("Welcome to DiceRealms (alpha). Type 'help' to begin.\n")
+        self.write("You are in " + self.world.look(self.player.room) + "\n\n")
         self._task = asyncio.create_task(self._run())
 
     async def _run(self):

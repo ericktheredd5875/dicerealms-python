@@ -247,7 +247,7 @@ class ActionProcessor:
                 "room": player.room if player else "Unknown",
                 "description": room.description if room else "Unknown",
                 "exits": list(room.exits.keys()),
-                "other_players": [p.name for p in players_in_room],,
+                "other_players": [p.name for p in players_in_room],
             },
         }
         

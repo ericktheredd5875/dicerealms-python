@@ -150,7 +150,7 @@ class GameServer:
         })
 
         # Broadcast initial turn status
-        await self.broadcast_turn_status()
+        await self._broadcast_turn_status()
 
     async def handle_action(self, player_id: str, message: dict):
         """

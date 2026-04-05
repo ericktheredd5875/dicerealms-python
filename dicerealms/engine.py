@@ -6,6 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from dicerealms.core import roll_dice
+from dicerealms.world import World
+from dicerealms.player import Player
 
 
 @dataclass
@@ -29,14 +31,19 @@ class GameEngine:
         self,
         input_fn: Callable[[], str] | None = None,
         output_fn: Callable[[str], None] | None = None,
+        world: World | None = None,
+        player: Player | None = None,
     ):
         self._running = False
         self._input = input_fn or (lambda: input("> "))
         self._output = output_fn or print
+        self._world = world
+        self._player = player
         self._commands: dict[str, Command] = {
             "help": Command("help", "Show Command List", self._cmd_help),
             "roll": Command("roll", "Roll dice: roll 2d6+1", self._cmd_roll),
             "look": Command("look", "Look around the current room", self._cmd_look),
+            "move": Command("move", "Move in a direction: move north", self._cmd_move),
             "quit": Command("quit", "Quit the game", self._cmd_quit),
         }
 
@@ -94,9 +101,22 @@ class GameEngine:
         return f"{args[0]} -> {total} (Parts: {parts})"
 
     def _cmd_look(self, _: list[str]) -> str:
-        # TODO: Implement room description and connect world state
+        if self._world and self._player:
+            return self._world.look(self._player.room)
         return "You are in a dark room. There is a table with a map on it. Exits: north, east."
 
     def _cmd_quit(self, _: list[str]) -> str:
         self._running = False
         return "👋 Goodbye!"
+
+    def _cmd_move(self, args: list[str]) -> str:
+        if not args:
+            return "Usage: move <direction> (e.g. move north)"
+        if not self._world or not self._player:
+            return "Cannot move: no world loaded."
+        
+        new_room_id, message = self._world.move(self._player.room, args[0])
+        if new_room_id:
+            self._player.room = new_room_id
+            message += "\n\n" + self._world.look(new_room_id)
+        return message
