@@ -20,7 +20,11 @@ class ActionProcessor:
     Implements: announcement -> Wait -> Execution -> Result broadcasting.
     """
 
-    def __init__(self, game_state: GameState, turn_manager: TurnManager, broadcast_callback: Callable[[dict], Awaitable[None]]):
+    def __init__(
+        self, 
+        game_state: GameState, 
+        turn_manager: TurnManager, 
+        broadcast_callback: Callable[[dict], Awaitable[None]]):
         """
         Initialize the Action Processor.
 
@@ -58,18 +62,27 @@ class ActionProcessor:
                 "error": "Player not found in game state.",
             }
 
-        # Validate turn
+        player_name = player.name
+
+        # Validate it is the player's turn
         if not self.turn_manager.is_current_turn(player_id):
+            current_player = self.turn_manager.get_current_player()
+            current_player_name = (
+                self.game_state.get_player(current_player).name
+                if current_player and self.game_state.get_player(current_player)
+                else "Unknown"
+            )
+
             return {
                 "success": False,
-                "error": f"Not your turn! Current player: {self.turn_manager.get_current_player()}",
+                "error": f"Not your turn! Current player: {current_player_name}",
             }
 
         # Start turn action
         if not self.turn_manager.start_turn_action(player_id):
             return {
                 "success": False,
-                "error": "Cannot start action: turn action already in progress.",
+                "error": "Turn action already in progress.",
             }
 
         try:
@@ -81,87 +94,161 @@ class ActionProcessor:
                 "args": " ".join(args),
                 "status": "starting",
             })
+            logger.info(f"Action announcement: {player_name} is {action}ing {args}")
 
             # 2. Wait for dramatic effect
             await asyncio.sleep(self.action_delay)
+            logger.info(f"Action wait: {player_name} waited for {self.action_delay} seconds")
 
             # 3. Execute action
-            result_dict = {"success": True}
-            
-            if action == "roll":
-                # Handle dice rolling
-                if not args:
-                    result_dict = {
-                        "success": False,
-                        "error": "Roll action requires dice expression (e.g., '2d6').",
-                    }
-                else:
-                    dice_expr = args[0]
-                    try:
-                        total, parts = roll_dice(dice_expr)
-                        result_dict = {
-                            "success": True,
-                            "result": f"{player.name} rolled {dice_expr}: {total} (Parts: {parts})",
-                            "details": {
-                                "dice": dice_expr,
-                                "total": total,
-                                "parts": parts,
-                            },
-                        }
-                    except ValueError as e:
-                        result_dict = {
-                            "success": False,
-                            "error": f"Invalid dice expression: {e}",
-                        }
-            elif action == "move":
-                # Handle movement
-                if not args:
-                    result_dict = {
-                        "success": False,
-                        "error": "Move action requires direction (e.g., 'north', 'south').",
-                    }
-                else:
-                    direction = args[0]
-                    success, message = self.game_state.move_player(player_id, direction)
-                    result_dict = {
-                        "success": success,
-                        "result": message,
-                        "details": {
-                            "direction": direction,
-                            "new_room": self.game_state.get_player(player_id).room if success else None,
-                        },
-                    }
-            else:
-                # Unknown action
-                result_dict = {
-                    "success": False,
-                    "error": f"Unknown action: {action}",
-                }
+            result = await self._execute_action(player_id, action, args)
+            logger.info(f"Action result: {result}")
 
             # 4. Broadcast action result
             await self.broadcast({
                 "type": "action_result",
                 "player": player.name,
                 "action": action,
-                "result": result_dict.get("result", result_dict.get("error", "Action completed")),
-                "details": result_dict.get("details", {}),
+                "result": result.get("result", result.get("error", "Action completed")),
+                "details": result.get("details", {}),
             })
+            logger.info(f"Action result broadcast: {player_name} - {action}")
 
             # 5. End turn action
-            self.turn_manager.end_turn_action()
+            next_player_id = self.turn_manager.advance_turn()
+            next_player_name = "Unknown"
+            if next_player_id:
+                next_player = self.game_state.get_player(next_player_id)
+                if next_player:
+                    next_player_name = next_player.name
 
-            # 6. Advance turn
-            self.turn_manager.advance_turn()
+            await self._broadcast_turn_status(next_player_id, next_player_name)
 
-            return result_dict
+            return {
+                "success": True,
+                "result": result
+            }
 
         except Exception as e:
-            # Ensure we end the turn action even on error
-            self.turn_manager.end_turn_action()
             logger.error(f"Error processing action for {player_id}: {e}")
+            await self.broadcast({
+                "type": "error",
+                "message": f"Error processing {action}: {str(e)}",
+            })
             return {
                 "success": False,
-                "error": f"Error processing action: {e}",
+                "error":str(e),
             }
+
+        finally:
+            # Always end the turn action
+            self.turn_manager.end_turn_action()
+
+    async def _execute_action(
+        self,
+        player_id: str,
+        action: str,
+        args: list[str]) -> dict:
+
+        """
+        Execute a specific game action.
+        Return dict with 'result' (string) and 'details' (dict)
+        """
+
+        action_lower = action.lower()
+        if action_lower == "roll":
+            return await self._execute_roll(args)
+
+        elif action_lower == "move":
+            return await self._execute_move(player_id, args)
+
+        elif action_lower == "look":
+            return await self._execute_look(player_id)
+
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    async def _execute_roll(self, args: list[str]) -> dict:
+        """
+        Execute a dice roll action.
+        """
+
+        if not args:
+            raise ValueError("Roll action requires a dice expression (IE: 2d6+1)")
         
+        dice_expr = args[0]
+        try:
+            total, parts = roll_dice(dice_expr)
+            return {
+                "result": f"Rolled {dice_expr} -> {total} (Parts: {parts})",
+                "details": {
+                    "expression": dice_expr,
+                    "total": total,
+                    "parts": parts,
+                },
+            }
+        except ValueError as e:
+            raise ValueError(f"Invalid dice expression: {dice_expr} - {str(e)}")
+
+    async def _execute_move(self, player_id: str, args: list[str]) -> dict:
+        """
+        Execute a move action.
+        """
+        if not args:
+            raise ValueError("Move action requires a direction (IE: north, south, east, west)")
+
+        direction = args[0].lower()
+        success, message = self.game_state.move_player(player_id, direction)
+
+        if success:
+            player = self.game_state.get_player(player_id)
+            room = self.game_state.get_room(player.room) if player else None
+
+            room_description = room.description if room else "Unknowd room"
+            exits = ",".join(room.exits.keys()) if room and room.exits else "No Exits"
+
+            return {
+                "result": message,
+                "details": {
+                    "room": player.room if player else "Unknown",
+                    "description": room_description,
+                    "exits": exits,
+                },
+            }
+        else:
+            raise ValueError(message)
+
+    async def _execute_look(self, player_id: str) -> dict:
+        """
+        Execute a look action.
+        """
+        player = self.game_state.get_player(player_id)
+        if not player:
+            raise ValueError("Player not found.")
+
+        room = self.game_state.get_room(player.room)
+        if not room:
+            raise ValueError(f"Room {player.room} not found.")
+
+        # Get other players in the room
+        players_in_room = self.game_state.get_players_in_room(player.room)
+        other_players = [p.name for p in players_in_room if p.player_id != player_id]
+
+        exits = ",".join(room.exits.keys()) if room and room.exits else "None"
+
+        description = f"{room.description}\n"
+        if other_players:
+            description += f"Other players in the room: {', '.join(other_players)}\n"
+        description += f"Exits: {exits}"
+
+        return {
+            "result": description,
+            "details": {
+                "room": player.room if player else "Unknown",
+                "description": room.description if room else "Unknown",
+                "exits": list(room.exits.keys()),
+                "other_players": [p.name for p in players_in_room],,
+            },
+        }
         
+    ### START HERE -->> _execute_help

@@ -11,6 +11,9 @@ import websockets
 from loguru import logger
 from websockets import ServerConnection
 
+from dicerealms.server.action_processor import ActionProcessor
+from dicerealms.server.game_state import GameState
+
 #from dicerealms.protocol.messages import ActionMessage, ChatMessage, ConnectMessage
 from dicerealms.server.turn_manager import TurnManager
 
@@ -26,13 +29,22 @@ class GameServer:
         self.connected_clients: dict[str, ServerConnection] = {}
         self.player_names: dict[str, str] = {}
         self._next_player_id = 1
+
+        # Initialize game systems
         self.turn_manager = TurnManager()
+        self.game_state = GameState()
+
+        # Initialize action processor with broadcast callback
+        self.action_processor = ActionProcessor(
+            game_state = self.game_state,
+            turn_manager = self.turn_manager,
+            broadcast_callback = self.broadcast,
+        )
 
     async def handle_client(self, websocket: ServerConnection, path: str | None = None):
         """
         Handle a new client connection.
         """
-
         player_id = f"player_{self._next_player_id}"
         self._next_player_id += 1
 
@@ -67,7 +79,11 @@ class GameServer:
                     "type": "player_left",
                     "player": name,
                 })
+
+            # Remove from turn manager and game state
             self.turn_manager.remove_player(player_id)
+            if self.game_state.get_player(player_id):
+                self.game_state.remove_player(player_id)
 
     async def handle_message(self, player_id: str, raw_message: str):
         """
@@ -108,73 +124,72 @@ class GameServer:
         Handle player connection/name setting.
         """
         player_name = message.get("player_name")
+        if not player_name:
+            await self.send_to_client(player_id, {
+                "type": "error",
+                "message": "Player name is required."
+            })
+            return
+
         self.player_names[player_id] = player_name
 
+        # Add player to game state
+        self.game_state.add_player(player_id, player_name)
+
+        # Broadcasst player joined message to all clients
         await self.broadcast({
             "type": "player_joined",
             "player": player_name,
         })
 
+        # Send confirmation message to player
         await self.send_to_client(player_id, {
             "type": "connected",
             "player_name": player_name,
             "message": f"Welcome, {player_name}"
         })
 
+        # Broadcast initial turn status
+        await self.broadcast_turn_status()
+
     async def handle_action(self, player_id: str, message: dict):
         """
         Handle game actions - Placeholder for now.
         """
-        player_name = self.player_names.get(player_id, "Unknown")
+        # player_name = self.player_names.get(player_id, "Unknown")
         action = message.get("action")
         args = message.get("args", [])
 
-        if not self.turn_manager.is_current_turn(player_id):
+        if not action:
             await self.send_to_client(player_id, {
                 "type": "error",
-                "message": f"Not your turn! Waiting for {self.turn_manager.get_current_player()}"
+                "message": "Action is required."
             })
             return
 
-        # Start action - check if turn action can start
-        if not self.turn_manager.start_turn_action(player_id):
+        # Process the action (includes turn validation, announcement, execution, result)
+        result = await self.action_processor.process_action(player_id, action, args)
+
+        # if there was an error, send it to the player
+        if not result.get("success"):
             await self.send_to_client(player_id, {
-                "type":"error",
-                "message": "Cannot start action: turn action already in progress or not your turn."
+                "type": "error",
+                "message": result.get("error", "An unknown error occurred.")
             })
-            return
 
-        # For now, just echo
-        await self.broadcast({
-            "type": "action_result",
-            "player": player_name,
-            "action": action,
-            "result": f"Action {action} by {player_name} with args: {args}",
-            "details": {}
-        })
-
-        # End action
-        self.turn_manager.end_turn_action()
-
-        # Advance turn to next player
-        next_player = self.turn_manager.advance_turn()
-        if next_player:
-            await self.send_to_client(next_player, {
-                "type": "next_turn",
-                "player": next_player,
-                "message": f"It's your turn, {next_player}!"
-            })
-        else:
-            await self.broadcast({
-                "type": "no_players",
-                "message": "No players left in the game."
-            })
+        # Broadcast turn status update after action completes
+        await self._broadcast_turn_status()
 
     async def handle_chat(self, player_id: str, message: dict):
         """
         Handle chat messages.
         """
-        player_name = self.player_names.get(player_id, "Unknown")
+        player = self.game_state.get_player(player_id)
+        if not player:
+            player_name = self.player_names.get(player_id, "Unknown")
+        else:
+            player_name = player.name
+
         chat_message = message.get("message", "")
 
         await self.broadcast({
@@ -182,6 +197,31 @@ class GameServer:
             "player": player_name,
             "message": chat_message,
         })
+
+    async def _broadcast_turn_status(self):
+        """
+        Broadcast turn status to all players.
+        """
+        current_player_id = self.turn_manager.get_current_player()
+        current_player_name = "None"
+
+        if current_player_id:
+            player = self.game_state.get_player(current_player_id)
+            if player:
+                current_player_name = player.name
+
+        # Send turn status to all connected clients
+        for player_id, player in self.game_state.players.items():
+            turn_status = self.turn_manager.get_turn_status(player_id)
+            await self.send_to_client(player_id, {
+                "type": "turn_status",
+                "current_player": current_player_name,
+                "current_player_id": current_player_id,
+                "is_your_turn": turn_status["is_your_turn"],
+                "waiting_for": current_player_name if not turn_status["is_your_turn"] else None,
+                "queue_position": turn_status["queue_position"],
+                "queue_size": turn_status["queue_size"],
+            })
 
     async def send_to_client(self, player_id: str, message: dict):
         """
@@ -210,11 +250,14 @@ class GameServer:
                 del self.connected_clients[player_id]
             if player_id in self.player_names:
                 del self.player_names[player_id]
+            self.turn_manager.remove_player(player_id)
+            if self.game_state.get_player(player_id):
+                self.game_state.remove_player(player_id)
 
     async def run(self):
         """
         Start the Websocket Server.
         """
         logger.info(f"Starting DiceRealms server on {self.host}:{self.port}")
-        async with serve(self.handle_client, self.host, self.port):
+        async with websockets.serve(self.handle_client, self.host, self.port):
             await asyncio.Future() # Run forever
