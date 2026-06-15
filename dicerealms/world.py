@@ -17,6 +17,7 @@ Future-ready (not required for M2):
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -191,8 +192,6 @@ class World:
 
         if start_id not in self._rooms or goal_id not in self._rooms:
             return None
-
-        from collections import deque
 
         q = deque([start_id])
         come_from: dict[str, str | None] = {start_id: None}

@@ -17,7 +17,7 @@ class PlayerState:
 
 @dataclass
 class Room:
-    """Represnts a game room in the world."""
+    """Represents a game room in the world."""
     room_id: str
     name: str
     description: str

@@ -136,7 +136,7 @@ class GameServer:
         # Add player to game state
         self.game_state.add_player(player_id, player_name)
 
-        # Broadcasst player joined message to all clients
+        # Broadcast player joined message to all clients
         await self.broadcast({
             "type": "player_joined",
             "player": player_name,
@@ -156,7 +156,6 @@ class GameServer:
         """
         Handle game actions - Placeholder for now.
         """
-        # player_name = self.player_names.get(player_id, "Unknown")
         action = message.get("action")
         args = message.get("args", [])
 

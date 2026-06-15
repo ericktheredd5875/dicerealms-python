@@ -35,7 +35,7 @@ class ActionProcessor:
         self.game_state = game_state
         self.turn_manager = turn_manager
         self.broadcast = broadcast_callback
-        self.action_delay = 2.0 # * Seconds to wait for dramatic effect.
+        self.action_delay = 2.0
 
     async def process_action(self, player_id: str, action: str, args: list[str]) -> dict:
         """
@@ -216,7 +216,7 @@ class ActionProcessor:
             player = self.game_state.get_player(player_id)
             room = self.game_state.get_room(player.room) if player else None
 
-            room_description = room.description if room else "Unknowd room"
+            room_description = room.description if room else "Unknown room"
             exits = ",".join(room.exits.keys()) if room and room.exits else "No Exits"
 
             return {

@@ -155,7 +155,6 @@ class TurnManager:
         return {
             "is_your_turn": is_your_turn,
             "current_player": current_player,
-            # "current_player_name": current_player_name,
             "queue_position": queue_position,
             "queue_size": len(self.turn_queue),
             "turn_in_progress": self.turn_in_progress

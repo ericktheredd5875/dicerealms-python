@@ -41,11 +41,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 
-#[tool.pytest.ini_options]
-#addopts = "-q"
-#pythonpath = ["."]
-#testpaths = ["tests"]
-
 [tool.pytest.ini_options]
 addopts = "-q --tb=short"
 pythonpath = ["."]
@@ -87,15 +82,6 @@ precision = 2
 line-length = 100
 target-version = "py313"
 lint.select = ["E","F","I","UP","B"]
-
-#[tool.ruff.lint]
-# Enable commonly useful rules
-#select = [
-#    "E",  # pycodestyle errors
-#    "F",  # pyflakes
-#    "I",  # import sorting
-#    "B",  # bugbear
-#]
 
 lint.ignore = [
     "E501",  # line length handled by formatter

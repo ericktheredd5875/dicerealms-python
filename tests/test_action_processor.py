@@ -63,7 +63,6 @@ class TestActionProcessor:
         turn_manager.add_player(player_id)
         
         result = await action_processor.process_action(player_id, "roll", ["1d6"])
-        print(result)
         
         assert result["success"] is False
         assert "not your turn" in result["error"].lower()
@@ -94,9 +93,9 @@ class TestActionProcessor:
         game_state.add_player(player_id, "Alice")
         turn_manager.add_player(player_id)
         
-        start_time = asyncio.get_event_loop().time()
+        start_time = asyncio.get_running_loop().time()
         await action_processor.process_action(player_id, "roll", ["1d6"])
-        end_time = asyncio.get_event_loop().time()
+        end_time = asyncio.get_running_loop().time()
         
         # Should take at least action_delay seconds
         elapsed = end_time - start_time
