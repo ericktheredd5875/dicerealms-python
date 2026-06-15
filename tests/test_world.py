@@ -2,7 +2,8 @@
 """Tests for World graph navigation."""
 import pytest
 
-from dicerealms.world import Exit, Room, World, load_default_world
+from dicerealms.world import Room, World, load_default_world
+
 
 class TestRoom:
 

@@ -4,7 +4,7 @@ Message protocol for DiceRealms multiplayer.
 All messages are JSON-encoded WebSocket frames.
 """
 
-from typing import Literal, Optional, TypedDict
+from typing import Literal, TypedDict
 
 
 # Client -> Server Messages
@@ -20,7 +20,7 @@ class ActionMessage(TypedDict):
 class ChatMessage(TypedDict):
     type: Literal["chat"]
     message: str
-    target: Optional[str] | None = None  # For whispers
+    target: str | None | None = None  # For whispers
 
 # Server -> Client Messages
 class WelcomeMessage(TypedDict):
@@ -46,5 +46,5 @@ class TurnStatusMessage(TypedDict):
     type: Literal["turn_status"]
     current_player: str
     is_your_turn: bool
-    waiting_for: Optional[str]
+    waiting_for: str | None
 

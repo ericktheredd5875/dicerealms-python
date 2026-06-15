@@ -6,6 +6,7 @@ from dicerealms.engine import GameEngine
 from dicerealms.player import Player
 from dicerealms.world import load_default_world
 
+
 @pytest.fixture
 def engine():
     """Engine without world — tests fallback behavior."""

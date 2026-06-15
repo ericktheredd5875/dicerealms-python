@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Tests for GameServer class."""
 
-import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 import websockets

@@ -4,6 +4,7 @@ import pytest
 
 from dicerealms.core import roll_dice
 
+
 class TestRollDice:
     """
     Test Suite for roll_dice.

@@ -211,7 +211,7 @@ class GameServer:
                 current_player_name = player.name
 
         # Send turn status to all connected clients
-        for player_id, player in self.game_state.players.items():
+        for player_id, _ in self.game_state.players.items():
             turn_status = self.turn_manager.get_turn_status(player_id)
             await self.send_to_client(player_id, {
                 "type": "turn_status",

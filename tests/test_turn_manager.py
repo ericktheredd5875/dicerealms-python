@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Tests for TurnManager class."""
 
-import pytest
 
 from dicerealms.server.turn_manager import TurnManager
 

@@ -6,8 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from dicerealms.core import roll_dice
-from dicerealms.world import World
 from dicerealms.player import Player
+from dicerealms.world import World
 
 
 @dataclass

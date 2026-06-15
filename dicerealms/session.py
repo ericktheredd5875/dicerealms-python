@@ -2,8 +2,9 @@
 import asyncio
 
 from dicerealms.engine import GameEngine
-from dicerealms.world import load_default_world
 from dicerealms.player import Player
+from dicerealms.world import load_default_world
+
 
 class GameSession:
     """

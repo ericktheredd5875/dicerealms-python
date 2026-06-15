@@ -2,7 +2,7 @@
 """Tests for ActionProcessor class."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -79,7 +79,7 @@ class TestActionProcessor:
         turn_manager.add_player(player_id)
         turn_manager.add_player(other_player)
         
-        result = await action_processor.process_action(player_id, "roll", ["2d6"])
+        await action_processor.process_action(player_id, "roll", ["2d6"])
         
         # Should broadcast action announcement and result
         assert broadcast_callback.call_count >= 2

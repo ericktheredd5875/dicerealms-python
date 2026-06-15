@@ -7,7 +7,6 @@ Connects to the server and allows testing of the WebSocket connection.
 import asyncio
 import json
 import sys
-from typing import Optional
 
 import websockets
 from loguru import logger
@@ -24,7 +23,7 @@ class TestClient:
     def __init__(self, uri: str, player_name: str):
         self.uri = uri
         self.player_name = player_name
-        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
+        self.websocket: websockets.WebSocketClientProtocol | None = None
         self.connected = False
 
     async def connect(self):

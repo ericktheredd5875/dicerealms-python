@@ -4,8 +4,7 @@ Handles synchronized turn-based actions with announcement -> Wait -> Execution -
 """
 
 import asyncio
-from collections.abc import Awaitable
-from typing import Callable, Optional
+from collections.abc import Awaitable, Callable
 
 from loguru import logger
 
@@ -202,7 +201,7 @@ class ActionProcessor:
                 },
             }
         except ValueError as e:
-            raise ValueError(f"Invalid dice expression: {dice_expr} - {str(e)}")
+            raise ValueError(f"Invalid dice expression: {dice_expr} - {(e)}") from e
 
     async def _execute_move(self, player_id: str, args: list[str]) -> dict:
         """

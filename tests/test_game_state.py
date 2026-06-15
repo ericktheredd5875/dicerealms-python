@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Tests for GameState class."""
 
-import pytest
 
 from dicerealms.server.game_state import GameState, PlayerState, Room
 
