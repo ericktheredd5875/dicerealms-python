@@ -84,6 +84,7 @@ class ActionProcessor:
                 "error": "Turn action already in progress.",
             }
 
+        succeeded = False
         try:
             # 1. Broadcast action announcement
             await self.broadcast({
@@ -113,17 +114,7 @@ class ActionProcessor:
             })
             logger.info(f"Action result broadcast: {player_name} - {action}")
 
-            # 5. End turn action, then advance
-            self.turn_manager.end_turn_action()
-            next_player_id = self.turn_manager.advance_turn()
-            next_player_name = "Unknown"
-            if next_player_id:
-                next_player = self.game_state.get_player(next_player_id)
-                if next_player:
-                    next_player_name = next_player.name
-
-            await self._broadcast_turn_status(next_player_id, next_player_name)
-
+            succeeded = True
             return {
                 "success": True,
                 "result": result
@@ -141,8 +132,16 @@ class ActionProcessor:
             }
 
         finally:
-            # Always end the turn action
+            # 5. End turn action, then advance, ALWAYS
             self.turn_manager.end_turn_action()
+            if succeeded:
+                next_player_id = self.turn_manager.advance_turn()
+                next_player_name = "Unknown"
+                if next_player_id:
+                    next_player = self.game_state.get_player(next_player_id)
+                    if next_player:
+                        next_player_name = next_player.name
+                await self._broadcast_turn_status(next_player_id, next_player_name)
 
     async def _broadcast_turn_status(
             self, 
