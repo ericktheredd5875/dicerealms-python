@@ -114,7 +114,8 @@ class ActionProcessor:
             })
             logger.info(f"Action result broadcast: {player_name} - {action}")
 
-            # 5. End turn action
+            # 5. End turn action, then advance
+            self.turn_manager.end_turn_action()
             next_player_id = self.turn_manager.advance_turn()
             next_player_name = "Unknown"
             if next_player_id:
@@ -144,6 +145,16 @@ class ActionProcessor:
             # Always end the turn action
             self.turn_manager.end_turn_action()
 
+    async def _broadcast_turn_status(
+            self, 
+            current_player_id: str | None, 
+            current_player_name: str) -> None:
+        await self.broadcast({
+            "type": "turn_status",
+            "current_player": current_player_name,
+            "current_player_id": current_player_id
+        })
+
     async def _execute_action(
         self,
         player_id: str,
@@ -164,6 +175,9 @@ class ActionProcessor:
 
         elif action_lower == "look":
             return await self._execute_look(player_id)
+
+        elif action_lower == "help":
+            return await self._execute_help()
 
         else:
             raise ValueError(f"Unknown action: {action}")
@@ -251,4 +265,21 @@ class ActionProcessor:
             },
         }
         
-    ### START HERE -->> _execute_help
+    async def _execute_help(self) -> dict:
+        """
+        Execute the view of the help menu.
+        """
+        actions = [
+            ("roll", "<dice-expr> Role dice (IE: 2d6+1)"),
+            ("move", "<direction> Move in a direction (IE: north, south, east, west)"),
+            ("look", "Get a description of the current room and its contents"),
+            ("help", "View this help menu"),
+        ]
+
+        result = "Available actions:\n" + "\n".join(f"{name:<8} {desc}" for name, desc in actions)
+        return {
+            "result": result,
+            "details": {
+                "actions": [name for name, _ in actions],
+            }
+        }

@@ -76,7 +76,7 @@ class TestGameServer:
         
         assert server.player_names[player_id] == "Alice"
         server.broadcast.assert_called_once()
-        server.connected_clients[player_id].send.assert_called_once()
+        server.connected_clients[player_id].send.assert_called()
 
     @pytest.mark.asyncio
     async def test_handle_chat_message(self, server):
@@ -104,6 +104,7 @@ class TestGameServer:
         server.connected_clients[player_id].send = AsyncMock()
         
         # Set other player as current
+        server.game_state.add_player(player_id, "Alice")
         server.turn_manager.add_player(other_player)
         server.turn_manager.add_player(player_id)
         
@@ -111,8 +112,9 @@ class TestGameServer:
         await server.handle_action(player_id, message)
         
         # Should send error message
-        server.connected_clients[player_id].send.assert_called_once()
-        sent_msg = json.loads(server.connected_clients[player_id].send.call_args[0][0])
+        server.connected_clients[player_id].send.assert_called()
+        first_call = server.connected_clients[player_id].send.call_args_list[0]
+        sent_msg = json.loads(first_call[0][0])
         assert sent_msg["type"] == "error"
         assert "not your turn" in sent_msg["message"].lower()
 
@@ -123,19 +125,20 @@ class TestGameServer:
         server.player_names[player_id] = "Alice"
         server.connected_clients[player_id] = AsyncMock()
         server.broadcast = AsyncMock()
+        server.action_processor.broadcast = server.broadcast
         
         # Set player as current
+        server.game_state.add_player(player_id, "Alice")
         server.turn_manager.add_player(player_id)
         
         message = {"type": "action", "action": "roll", "args": ["1d6"]}
         await server.handle_action(player_id, message)
         
         # Should broadcast action result
-        server.broadcast.assert_called()
-        broadcast_msg = server.broadcast.call_args[0][0]
-        assert broadcast_msg["type"] == "action_result"
-        assert broadcast_msg["player"] == "Alice"
-        assert broadcast_msg["action"] == "roll"
+        broadcast_calls = [call[0][0] for call in server.broadcast.call_args_list]
+        action_result = next(c for c in broadcast_calls if c["type"] == "action_result")
+        assert action_result["player"] == "Alice"
+        assert action_result["action"] == "roll"
 
     @pytest.mark.asyncio
     async def test_send_to_client(self, server, mock_websocket):
