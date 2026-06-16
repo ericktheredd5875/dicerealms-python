@@ -2,7 +2,7 @@
 """Tests for GameState class."""
 
 
-from dicerealms.server.game_state import GameState, PlayerState, Room
+from dicerealms.server.game_state import GameState, PlayerState
 
 
 class TestPlayerState:
@@ -13,28 +13,12 @@ class TestPlayerState:
         player = PlayerState(player_id="p1", name="Alice")
         assert player.player_id == "p1"
         assert player.name == "Alice"
-        assert player.room == "Town Square"  # Default
+        assert player.room == "town_square"  # Default
 
     def test_player_state_custom_room(self):
         """Test PlayerState with custom room."""
-        player = PlayerState(player_id="p1", name="Alice", room="Market")
-        assert player.room == "Market"
-
-
-class TestRoom:
-    """Test suite for Room dataclass."""
-
-    def test_room_creation(self):
-        """Test creating a Room."""
-        room = Room(
-            room_id="town_square",
-            name="Town Square",
-            description="A bustling square."
-        )
-        assert room.room_id == "town_square"
-        assert room.name == "Town Square"
-        assert room.description == "A bustling square."
-        assert room.exits == {}  # Default empty dict
+        player = PlayerState(player_id="p1", name="Alice", room="tavern")
+        assert player.room == "tavern"
 
 
 class TestGameState:
@@ -44,10 +28,9 @@ class TestGameState:
         """Test GameState initializes with default world."""
         gs = GameState()
         assert len(gs.players) == 0
-        assert len(gs.rooms) == 3  # Town Square, Market, Tavern
-        assert "Town Square" in gs.rooms
-        assert "Market" in gs.rooms
-        assert "Tavern" in gs.rooms
+        assert gs.world.has_room("town_square")
+        assert gs.world.has_room("tavern")
+        assert gs.world.has_room("market")
 
     def test_add_player(self):
         """Test adding a player to game state."""
@@ -93,14 +76,14 @@ class TestGameState:
         gs.add_player("player_2", "Bob")
         
         # Both start in Town Square
-        players = gs.get_players_in_room("Town Square")
+        players = gs.get_players_in_room("town_square")
         assert len(players) == 2
-        assert all(p.room == "Town Square" for p in players)
+        assert all(p.room == "town_square" for p in players)
 
     def test_get_players_in_room_empty(self):
         """Test getting players in empty room."""
         gs = GameState()
-        players = gs.get_players_in_room("Market")
+        players = gs.get_players_in_room("market")
         assert players == []
 
     def test_move_player_success(self):
@@ -110,8 +93,8 @@ class TestGameState:
         
         success, message = gs.move_player("player_1", "north")
         assert success is True
-        assert gs.get_player("player_1").room == "Market"
-        assert "Market" in message
+        assert gs.get_player("player_1").room == "north_road"
+        assert "North Road" in message
 
     def test_move_player_invalid_direction(self):
         """Test moving player in invalid direction."""
@@ -120,7 +103,7 @@ class TestGameState:
         
         success, message = gs.move_player("player_1", "west")
         assert success is False
-        assert gs.get_player("player_1").room == "Town Square"  # Unchanged
+        assert gs.get_player("player_1").room == "town_square"  # Unchanged
         assert "west" in message.lower() or "no exit" in message.lower()
 
     def test_move_player_nonexistent(self):
@@ -133,7 +116,7 @@ class TestGameState:
     def test_get_room(self):
         """Test getting a room by name."""
         gs = GameState()
-        room = gs.get_room("Town Square")
+        room = gs.get_room("town_square")
         assert room is not None
         assert room.name == "Town Square"
 

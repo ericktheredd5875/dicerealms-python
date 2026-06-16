@@ -2,9 +2,11 @@
 Manages shared game state for DiceRealms.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from loguru import logger
+
+from dicerealms.world import World, load_default_world
 
 
 @dataclass
@@ -12,16 +14,9 @@ class PlayerState:
     """State for a single player in the game."""
     player_id: str
     name: str
-    room: str = "Town Square"
+    room: str = "town_square"
     # TODO: stats, inventory, etc.
 
-@dataclass
-class Room:
-    """Represents a game room in the world."""
-    room_id: str
-    name: str
-    description: str
-    exits: dict[str, str] = field(default_factory=dict) # * Direction -> room_name
 
 class GameState:
     """
@@ -30,31 +25,7 @@ class GameState:
 
     def __init__(self):
         self.players: dict[str, PlayerState] = {}
-        self.rooms: dict[str, Room] = {}
-        self._initialize_world()
-
-    def _initialize_world(self):
-        """
-        Initialize the game world with starting rooms.
-        """
-        self.rooms["Town Square"] = Room(
-            room_id="100",
-            name="Town Square",
-            description="A bustling town square with a fountain in the center.",
-            exits={"north": "Market", "east": "Tavern"}
-        )
-        self.rooms["Market"] = Room(
-            room_id="101",
-            name="Market",
-            description="A busy marketplace with various stalls.",
-            exits={"south": "Town Square"}
-        )
-        self.rooms["Tavern"] = Room(
-            room_id="102",
-            name="Tavern",
-            description="A cozy tavern with a warm fireplace.",
-            exits={"west": "Town Square"}
-        )
+        self.world: World = load_default_world()
 
     def add_player(self, player_id: str, name: str) -> PlayerState:
         """
@@ -96,22 +67,15 @@ class GameState:
         if not player:
             return False, "Player not found."
 
-        current_room = self.rooms.get(player.room)
-        if not current_room:
-            return False, "Room not found."
+        new_room_id, message = self.world.move(player.room, direction)
+        if new_room_id:
+            player.room = new_room_id
+            return True, message
+        
+        return False, message
 
-        target_room = current_room.exits.get(direction.lower())
-        if not target_room:
-            return False, f"No exit {direction} from {player.room}."
-
-        if target_room not in self.rooms:
-            return False, f"Target room {target_room} not found."
-
-        player.room = target_room
-        return True, f"Moved {direction} to {target_room}."
-
-    def get_room(self, room_name: str) -> Room | None:
+    def get_room(self, room_id: str):
         """
-        Get room by name.
+        Get room by ID.
         """
-        return self.rooms.get(room_name)
+        return self.world.current_room(room_id)
