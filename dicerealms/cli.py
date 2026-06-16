@@ -10,11 +10,8 @@ from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
 
+from dicerealms.client import GameClient
 from dicerealms.server.server import GameServer
-
-#from typing import Optional
-
-
 
 app = typer.Typer(
     help="DiceRealms CLI -- a multiplayer, turn-based, dice-driven fantasy RPG ✨",
@@ -79,9 +76,15 @@ def connect(
         )
     )
 
-    # TODO: implement client connection
-    console.print("[yellow]🔗 Client connection not yet implemented.[/yellow]")
-    console.print("[dim]Coming soon in M3![/dim]")
+    client = GameClient(f"ws://{host}:{port}", name)
+    try:
+        asyncio.run(client.run())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]👋 Disconnected[/yellow]")
+    except Exception as e:
+        console.print(f"[bold red]❌ Connection error:[/bold red] {e}")
+        logger.error(f"Client error: {e}")
+        raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
     app()
