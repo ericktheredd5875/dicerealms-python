@@ -6,6 +6,7 @@ import pytest
 import websockets
 
 from dicerealms.client.client import GameClient
+from dicerealms.client.input_handler import InputHandler
 from dicerealms.client.ui import ClientUI
 
 
@@ -101,3 +102,66 @@ async def test_connect_sends_connect_message():
     sent = json.loads(fake_ws.sent[0])
     assert sent["type"] == "connect"
     assert sent["player_name"] == "Alice"
+
+
+# --- InputHandler ---
+
+@pytest.mark.parametrize("command,expected_message", [
+    ("chat hello world", {"type": "chat", "message": "hello world"}),
+    ("roll 2d6",         {"type": "action", "action": "roll",  "args": ["2d6"]}),
+    ("roll",             {"type": "action", "action": "roll",  "args": ["1d6"]}),
+    ("move north",       {"type": "action", "action": "move",  "args": ["north"]}),
+    ("move",             {"type": "action", "action": "move",  "args": [""]}),
+    ("look",             {"type": "action", "action": "look",  "args": []}),
+    ("help",             {"type": "action", "action": "help",  "args": []}),
+])
+async def test_handle_command_sends_correct_message(send_callback, command, expected_message):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command(command)
+    assert result is True
+    send_callback.assert_awaited_once_with(expected_message)
+
+
+async def test_handle_command_empty_returns_true_no_send(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command("")
+    assert result is True
+    send_callback.assert_not_awaited()
+
+
+async def test_handle_command_quit_returns_false(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command("quit")
+    assert result is False
+    send_callback.assert_not_awaited()
+
+
+async def test_handle_command_unknown_returns_true_no_send(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command("fly")
+    assert result is True
+    send_callback.assert_not_awaited()
+
+
+async def test_run_exits_on_eof(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    with (
+        patch("dicerealms.client.input_handler.PromptSession") as MockSession,
+        patch("dicerealms.client.input_handler.patch_stdout"),
+    ):
+        mock_session = MagicMock()
+        MockSession.return_value = mock_session
+        mock_session.prompt_async = AsyncMock(side_effect=EOFError)
+        await handler.run()
+
+
+async def test_run_exits_on_keyboard_interrupt(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    with (
+        patch("dicerealms.client.input_handler.PromptSession") as MockSession,
+        patch("dicerealms.client.input_handler.patch_stdout"),
+    ):
+        mock_session = MagicMock()
+        MockSession.return_value = mock_session
+        mock_session.prompt_async = AsyncMock(side_effect=KeyboardInterrupt)
+        await handler.run()
