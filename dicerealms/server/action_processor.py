@@ -9,6 +9,11 @@ from collections.abc import Awaitable, Callable
 from loguru import logger
 
 from dicerealms.core import roll_dice
+from dicerealms.protocol.messages import (
+    ActionAnnouncementMessage,
+    ActionResultMessage,
+    ErrorMessage,
+)
 from dicerealms.server.game_state import GameState
 from dicerealms.server.turn_manager import TurnManager
 
@@ -52,7 +57,6 @@ class ActionProcessor:
         Returns:
             dict with result information or error message.
         """
-
         # Get player info
         player = self.game_state.get_player(player_id)
         if not player:
@@ -87,13 +91,14 @@ class ActionProcessor:
         succeeded = False
         try:
             # 1. Broadcast action announcement
-            await self.broadcast({
+            announcement: ActionAnnouncementMessage = {
                 "type": "action_announcement",
                 "player": player.name,
                 "action": action,
                 "args": " ".join(args),
                 "status": "starting",
-            })
+            }
+            await self.broadcast(announcement)
             logger.info(f"Action announcement: {player_name} is {action}ing {args}")
 
             # 2. Wait for dramatic effect
@@ -105,13 +110,15 @@ class ActionProcessor:
             logger.info(f"Action result: {result}")
 
             # 4. Broadcast action result
-            await self.broadcast({
+            action_result: ActionResultMessage = {
                 "type": "action_result",
                 "player": player.name,
                 "action": action,
-                "result": result.get("result", result.get("error", "Action completed")),
+                "result": result.get("result", 
+                        result.get("error", "Action completed")),
                 "details": result.get("details", {}),
-            })
+            }
+            await self.broadcast(action_result)
             logger.info(f"Action result broadcast: {player_name} - {action}")
 
             succeeded = True
@@ -121,11 +128,12 @@ class ActionProcessor:
             }
 
         except Exception as e:
-            logger.error(f"Error processing action for {player_id}: {e}")
-            await self.broadcast({
+            err: ErrorMessage = {
                 "type": "error",
                 "message": f"Error processing {action}: {str(e)}",
-            })
+            }
+            logger.error(f"Error processing action for {player_id}: {e}")
+            await self.broadcast(err)
             return {
                 "success": False,
                 "error":str(e),
@@ -135,23 +143,8 @@ class ActionProcessor:
             # 5. End turn action, then advance, ALWAYS
             self.turn_manager.end_turn_action()
             if succeeded:
-                next_player_id = self.turn_manager.advance_turn()
-                next_player_name = "Unknown"
-                if next_player_id:
-                    next_player = self.game_state.get_player(next_player_id)
-                    if next_player:
-                        next_player_name = next_player.name
-                await self._broadcast_turn_status(next_player_id, next_player_name)
+                self.turn_manager.advance_turn()
 
-    async def _broadcast_turn_status(
-            self, 
-            current_player_id: str | None, 
-            current_player_name: str) -> None:
-        await self.broadcast({
-            "type": "turn_status",
-            "current_player": current_player_name,
-            "current_player_id": current_player_id
-        })
 
     async def _execute_action(
         self,
