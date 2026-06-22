@@ -45,6 +45,7 @@ class GameEngine:
             "look": Command("look", "Look around the current room", self._cmd_look),
             "move": Command("move", "Move in a direction: move north", self._cmd_move),
             "quit": Command("quit", "Quit the game", self._cmd_quit),
+            "stats": Command("stats", "Show your character stats", self._cmd_stats),
         }
 
     def run(self):
@@ -93,6 +94,7 @@ class GameEngine:
         rows = [f"{c.name:<8} {c.help}" for c in self._commands.values()]
         return "Commands:\n" + "\n".join(rows)
 
+
     def _cmd_roll(self, args: list[str]) -> str:
         if not args:
             return "Usage: roll <dice-expr> (e.g. 2d6+1)"
@@ -100,14 +102,17 @@ class GameEngine:
         total, parts = roll_dice(args[0])
         return f"{args[0]} -> {total} (Parts: {parts})"
 
+
     def _cmd_look(self, _: list[str]) -> str:
         if self._world and self._player:
             return self._world.look(self._player.room)
         return "You are in a dark room. There is a table with a map on it. Exits: north, east."
 
+
     def _cmd_quit(self, _: list[str]) -> str:
         self._running = False
         return "👋 Goodbye!"
+
 
     def _cmd_move(self, args: list[str]) -> str:
         if not args:
@@ -120,3 +125,16 @@ class GameEngine:
             self._player.room = new_room_id
             message += "\n\n" + self._world.look(new_room_id)
         return message
+
+
+    def _cmd_stats(self, _: list[str]) -> str:
+        if not self._player:
+            return "No player loaded."
+        
+        p = self._player
+        return (
+            f"Name: {p.name}\n"
+            f"Level: {p.level} XP: {p.xp}\n"
+            f"HP: {p.hp}/{p.max_hp}\n"
+            f"MP: {p.mp}/{p.max_mp}"
+        )

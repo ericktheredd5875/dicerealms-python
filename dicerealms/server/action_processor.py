@@ -167,11 +167,14 @@ class ActionProcessor:
         elif action_lower == "look":
             return await self._execute_look(player_id)
 
+        elif action_lower == "stats":
+            return await self._execute_stats(player_id)
+
         elif action_lower == "help":
             return await self._execute_help()
-
         else:
             raise ValueError(f"Unknown action: {action}")
+
 
     async def _execute_roll(self, args: list[str]) -> dict:
         """
@@ -194,6 +197,7 @@ class ActionProcessor:
             }
         except ValueError as e:
             raise ValueError(f"Invalid dice expression: {dice_expr} - {(e)}") from e
+
 
     async def _execute_move(self, player_id: str, args: list[str]) -> dict:
         """
@@ -222,6 +226,7 @@ class ActionProcessor:
             }
         else:
             raise ValueError(message)
+
 
     async def _execute_look(self, player_id: str) -> dict:
         """
@@ -256,6 +261,33 @@ class ActionProcessor:
             },
         }
         
+
+    async def _execute_stats(self, player_id: str) -> dict:
+        player = self.game_state.get_player(player_id)
+        if not player:
+            raise ValueError(f"Player not found. {player_id}")
+        
+        result = (
+            f"Name: {player.name}\n"
+            f"Level: {player.level} XP: {player.xp}\n"
+            f"HP: {player.hp}/{player.max_hp}\n"
+            f"MP: {player.mp}/{player.max_mp}"
+        )
+
+        return {
+            "result": result,
+            "details": {
+                "name": player.name,
+                "level": player.level,
+                "xp": player.xp,
+                "hp": player.hp,
+                "max_hp": player.max_hp,
+                "mp": player.mp,
+                "max_mp": player.max_mp,
+            }
+        }
+
+
     async def _execute_help(self) -> dict:
         """
         Execute the view of the help menu.
@@ -264,6 +296,7 @@ class ActionProcessor:
             ("roll", "<dice-expr> Role dice (IE: 2d6+1)"),
             ("move", "<direction> Move in a direction (IE: north, south, east, west)"),
             ("look", "Get a description of the current room and its contents"),
+            ("stats", "View your character stats"),
             ("help", "View this help menu"),
         ]
 

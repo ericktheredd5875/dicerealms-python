@@ -15,7 +15,12 @@ class PlayerState:
     player_id: str
     name: str
     room: str = "town_square"
-    # TODO: stats, inventory, etc.
+    hp: int = 20
+    max_hp: int = 20
+    mp: int = 10
+    max_mp: int = 10
+    level: int = 1
+    xp: int = 0
 
 
 class GameState:
