@@ -78,3 +78,21 @@ class TestGameEngine:
         full_engine.handle("move south")
         result = full_engine.handle("look")
         assert "Tavern" in result
+
+    def test_stats_no_player(self, engine):
+        result = engine.handle("stats")
+        assert "no player" in result.lower()
+
+    def test_stats_shows_defaults(self, full_engine):
+        result = full_engine.handle("stats")
+        assert "20/20" in result
+        assert "10/10" in result
+        assert "Level" in result
+
+    def test_stats_shows_player_name(self, full_engine):
+        result = full_engine.handle("stats")
+        assert full_engine._player.name in result
+
+    def test_help_includes_stats(self, engine):
+        result = engine.handle("help")
+        assert "stats" in result

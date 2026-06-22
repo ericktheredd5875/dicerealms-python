@@ -20,6 +20,15 @@ class TestPlayerState:
         player = PlayerState(player_id="p1", name="Alice", room="tavern")
         assert player.room == "tavern"
 
+    def test_player_state_default_stats(self):
+        player = PlayerState(player_id="p1", name="Alice")
+        assert player.hp == 20
+        assert player.max_hp == 20
+        assert player.mp == 10
+        assert player.max_hp == 20
+        assert player.level == 1
+        assert player.xp == 0
+
 
 class TestGameState:
     """Test suite for GameState."""

@@ -87,6 +87,23 @@ class TestActionProcessor:
         assert turn_manager.get_current_player() == other_player
 
     @pytest.mark.asyncio
+    async def test_execute_stats(self, action_processor, game_state, turn_manager):
+        player_id = "player_1"
+        game_state.add_player(player_id, "Alice")
+        turn_manager.add_player(player_id)
+
+        result = await action_processor.process_action(player_id, "stats", [])
+
+        assert result["success"] is True
+        details = result["result"]["details"]
+        assert details["name"] == "Alice"
+        assert details["hp"] == 20
+        assert details["max_hp"] == 20
+        assert details["mp"] == 10
+        assert details["level"] == 1
+        assert details["xp"] == 0
+
+    @pytest.mark.asyncio
     async def test_process_action_delay(self, action_processor, game_state, turn_manager, broadcast_callback):
         """Test that action processing includes delay."""
         player_id = "player_1"
