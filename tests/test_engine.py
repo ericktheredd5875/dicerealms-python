@@ -25,74 +25,90 @@ class TestGameEngine:
 
     def test_unknown_command(self, engine):
         result = engine.handle("fly")
-        assert "unknown command" in result.lower()
+        assert result["type"] == "error"
+        assert "unknown command" in result["message"].lower()
 
     def test_empty_input(self, engine):
-        assert engine.handle("") == ""
+        result = engine.handle("")
+        assert result["type"] == "empty"
 
     def test_help_lists_commands(self, engine):
         result = engine.handle("help")
-        assert "roll" in result
-        assert "look" in result
-        assert "move" in result
-        assert "quit" in result
+        assert result["type"] == "help"
+        names = [c["name"] for c in result["commands"]]
+        assert "roll" in names
+        assert "look" in names
+        assert "move" in names
+        assert "quit" in names
 
     def test_roll_valid(self, engine):
         result = engine.handle("roll 2d6")
-        assert "->" in result
+        assert result["type"] == "roll"
+        assert "total" in result
+        assert "parts" in result
 
     def test_roll_no_args(self, engine):
         result = engine.handle("roll")
-        assert "usage" in result.lower()
+        assert result["type"] == "error"
+        assert "usage" in result["message"].lower()
 
     def test_roll_invalid_expr(self, engine):
         result = engine.handle("roll notdice")
-        assert "error" in result.lower()
+        assert result["type"] == "error"
 
     def test_quit_returns_sentinel(self, engine):
-        assert engine.handle("quit") == "__QUIT__"
+        result = engine.handle("quit")
+        assert result["type"] == "quit"
 
     def test_look_fallback_without_world(self, engine):
         result = engine.handle("look")
-        assert len(result) > 0  # Returns something
+        assert result["type"] == "look"
+        assert len(result["description"]) > 0
 
     def test_look_with_world(self, full_engine):
-        # starts in town_square
-        result = full_engine.handle("look")  
-        assert "Town Square" in result
-        assert "Exits" in result
+        result = full_engine.handle("look")
+        assert result["type"] == "look"
+        assert "Town Square" in result["room"]
+        assert len(result["exits"]) > 0
 
     def test_move_no_args(self, full_engine):
         result = full_engine.handle("move")
-        assert "usage" in result.lower()
+        assert result["type"] == "error"
+        assert "usage" in result["message"].lower()
 
     def test_move_valid_direction(self, full_engine):
         result = full_engine.handle("move south")
-        assert "Tavern" in result
+        assert result["type"] == "move"
+        assert "Tavern" in result["room"]
 
     def test_move_invalid_direction(self, full_engine):
         result = full_engine.handle("move east")
-        assert "can't go" in result.lower()
+        assert result["type"] == "error"
+        assert "can't go" in result["message"].lower()
 
     def test_move_updates_player_room(self, full_engine):
         full_engine.handle("move south")
         result = full_engine.handle("look")
-        assert "Tavern" in result
+        assert "Tavern" in result["room"]
 
     def test_stats_no_player(self, engine):
         result = engine.handle("stats")
-        assert "no player" in result.lower()
+        assert result["type"] == "error"
+        assert "no player" in result["message"].lower()
 
     def test_stats_shows_defaults(self, full_engine):
         result = full_engine.handle("stats")
-        assert "20/20" in result
-        assert "10/10" in result
-        assert "Level" in result
+        assert result["type"] == "stats"
+        assert result["hp"] == 20
+        assert result["max_hp"] == 20
+        assert result["mp"] == 10
+        assert result["max_mp"] == 10
 
     def test_stats_shows_player_name(self, full_engine):
         result = full_engine.handle("stats")
-        assert full_engine._player.name in result
+        assert result["name"] == full_engine._player.name
 
     def test_help_includes_stats(self, engine):
         result = engine.handle("help")
-        assert "stats" in result
+        names = [c["name"] for c in result["commands"]]
+        assert "stats" in names
