@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 import asyncio
 
-from dicerealms.engine import GameEngine
+from dicerealms.engine import GameEngine, _render_plain
 from dicerealms.player import Player
 from dicerealms.world import load_default_world
 
@@ -12,19 +12,25 @@ class GameSession:
     to the Engine, and writes responses via a callback.
     """
 
-    def __init__(self, write_callback):
+    def __init__(self, write_callback, render_fn=None):
         self.player = Player()
         self.world = load_default_world()
 
         self.engine = GameEngine(world=self.world, player=self.player)
         self.incoming: asyncio.Queue[str] = asyncio.Queue()
         self.write = write_callback
+
+        self._render = render_fn or _render_plain
         self._task: asyncio.Task | None = None
         self._closed = asyncio.Event()
 
     async def start(self):
-        self.write("Welcome to DiceRealms (alpha). Type 'help' to begin.\n")
-        self.write("You are in " + self.world.look(self.player.room) + "\n\n")
+        self.write(
+            "Welcome to DiceRealms (alpha). Type 'help' to begin.\n"
+        )
+        self.write(
+            self._render(self.engine.handle("look")) + "\n\n"
+        )
         self._task = asyncio.create_task(self._run())
 
     async def _run(self):
@@ -32,11 +38,11 @@ class GameSession:
             while True:
                 line = await self.incoming.get()
                 result = self.engine.handle(line)
-                if result == "__QUIT__":
-                    self.write("Goodbye!\n")
+                if result["type"] == "quit":
+                    self.write(self._render(result) + "\n")
                     break
                 if result:
-                    self.write(result + "\n")
+                    self.write(self._render(result) + "\n")
         finally:
             self._closed.set()
 
