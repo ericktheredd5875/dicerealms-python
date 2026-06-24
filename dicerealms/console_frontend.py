@@ -3,7 +3,10 @@ import asyncio
 import contextlib
 import sys
 
+from rich.console import Console
+
 from dicerealms.session import GameSession
+from dicerealms.ui import SinglePlayerUI
 
 
 class ConsoleFrontend:
@@ -15,14 +18,17 @@ class ConsoleFrontend:
     """
 
     def __init__(self):
-        self.session = GameSession(write_callback=self._write)
+        self._console = Console()
+        self._ui = SinglePlayerUI()
+        self.session = GameSession(
+            write_callback=self._write,
+            render_fn = self._ui.render,
+        )
         self._reader_task: asyncio.Task | None = None
         self._stop = asyncio.Event()
 
-    def _write(self, text: str):
-        # stdout is blocking: keep it simple for now.
-        sys.stdout.write(text)
-        sys.stdout.flush()
+    def _write(self, text: str) -> None:
+        self._console.print(text, end="")
 
     async def start(self):
         await self.session.start()
@@ -31,7 +37,7 @@ class ConsoleFrontend:
 
     async def _stdin_reader(self):
         loop = asyncio.get_running_loop()
-        self._write("> ")
+        self._console.print("[dim]>[/dim] ", end="")
         while not self._stop.is_set():
             # Run blocking input() off-thread so the loop stays responsive
             try:
@@ -48,7 +54,7 @@ class ConsoleFrontend:
             if clean.lower() in {"quit", "exit"}:
                 break
 
-            self._write("> ")
+            self._console.print("[dim]>[/dim] ", end="")
 
     async def run(self):
         await self.start()
