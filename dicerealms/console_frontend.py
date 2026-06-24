@@ -54,6 +54,7 @@ class ConsoleFrontend:
             if clean.lower() in {"quit", "exit"}:
                 break
 
+            await asyncio.sleep(0)
             self._console.print("[dim]>[/dim] ", end="")
 
     async def run(self):
