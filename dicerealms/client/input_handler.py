@@ -6,6 +6,8 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
 from rich.console import Console
 
+from dicerealms.commands import COMMAND_ALIASES, DIRECTION_ALIASES
+
 
 class InputHandler:
     def __init__(self, 
@@ -18,7 +20,9 @@ class InputHandler:
 
     async def run(self) -> None: # the prompt loop
         self.console.print(
-            "[bold]Commands:[/bold] chat <msg>, roll <dice>, move <dir>, look, help, quit"
+            "[bold]Commands:[/bold] chat <msg>, roll <dice>, move <dir>, "
+            "look, stats, help, quit\n"
+            "[dim]Shortcuts: n/s/e/w, l=look, q=quit, h=help[/dim]"
         )
         session = PromptSession()
         with patch_stdout(raw=True):
@@ -39,6 +43,18 @@ class InputHandler:
         
         parts = command.split()
         cmd = parts[0].lower()
+
+        # Direction Aliases
+        resolved = DIRECTION_ALIASES.get(cmd)
+        if resolved or cmd in DIRECTION_ALIASES.values():
+            await self.send({
+                "type": "action",
+                "action": "move", 
+                "args": [resolved or cmd]
+            })
+
+        # Command Aliases
+        cmd = COMMAND_ALIASES.get(cmd, cmd)
 
         if cmd == "quit":
             return False

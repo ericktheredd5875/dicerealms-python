@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from dicerealms.commands import COMMAND_ALIASES, DIRECTION_ALIASES
 from dicerealms.core import roll_dice
 from dicerealms.player import Player
 from dicerealms.world import World
@@ -97,24 +98,9 @@ class GameEngine:
             if not raw:
                 continue
 
-            parts = raw.split()
-            cmd, args = parts[0].lower(), parts[1:]
-            handler = self._commands.get(cmd)
-            if handler:
-                try:
-                    result = handler.handler(args)
-                except Exception as e:  # Keep REPL alive
-                    result = {
-                        "type": "error", 
-                        "message": f"⚠️  Error: {e}"
-                    }
-            else:
-                result = {
-                    "type": "error",
-                    "message": f"Unknown command: {cmd} (try 'help')"
-                }
-
-            self._output(_render_plain(result))
+            result = self.handle(raw)
+            if result["type"] != "empty":
+                self._output(_render_plain(result))
 
 
     def handle(self, line: str) -> dict:
@@ -123,6 +109,14 @@ class GameEngine:
             return {"type": "empty"}
         parts = line.split()
         cmd, args = parts[0].lower(), parts[1:]
+
+        # Bare direction: "n", "north", "s", "south", etc.
+        resolved_dir = DIRECTION_ALIASES.get(cmd)
+        if resolved_dir or cmd in DIRECTION_ALIASES.values():
+            return self._cmd_move([resolved_dir or cmd])
+
+        # Command aliases: "l" -> "look", "q" -> "quit", etc.
+        cmd = COMMAND_ALIASES.get(cmd, cmd)
         command = self._commands.get(cmd)
         if command:
             try:
@@ -199,7 +193,8 @@ class GameEngine:
                 "message": "Cannot move: no world loaded"
             }
         
-        new_room_id, message = self._world.move(self._player.room, args[0])
+        direction = DIRECTION_ALIASES.get(args[0].lower(), args[0].lower())
+        new_room_id, message = self._world.move(self._player.room, direction)
         if new_room_id:
             self._player.room = new_room_id
             room = self._world.current_room(new_room_id)
