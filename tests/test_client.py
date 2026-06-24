@@ -165,3 +165,57 @@ async def test_run_exits_on_keyboard_interrupt(send_callback):
         MockSession.return_value = mock_session
         mock_session.prompt_async = AsyncMock(side_effect=KeyboardInterrupt)
         await handler.run()
+
+
+# --- InputHandler aliases ---
+
+@pytest.mark.parametrize("shortcut,expected_direction", [
+    ("n", "north"), ("s", "south"), ("e", "east"), ("w", "west"),
+    ("u", "up"), ("d", "down"),
+    ("north", "north"), ("south", "south"),
+])
+async def test_bare_direction_sends_move(send_callback, shortcut, expected_direction):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command(shortcut)
+    assert result is True
+    send_callback.assert_awaited_once_with(
+        {"type": "action", "action": "move", "args": [expected_direction]}
+    )
+
+
+@pytest.mark.parametrize("alias,expected_action", [
+    ("l", "look"),
+    ("h", "help"),
+])
+async def test_command_aliases_in_input_handler(send_callback, alias, expected_action):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command(alias)
+    assert result is True
+    send_callback.assert_awaited_once_with(
+        {"type": "action", "action": expected_action, "args": []}
+    )
+
+
+async def test_q_alias_quits(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command("q")
+    assert result is False
+    send_callback.assert_not_awaited()
+
+
+async def test_move_with_direction_alias(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command("move n")
+    assert result is True
+    send_callback.assert_awaited_once_with(
+        {"type": "action", "action": "move", "args": ["north"]}
+    )
+
+
+async def test_stats_command_in_input_handler(send_callback):
+    handler = InputHandler("Alice", send_callback)
+    result = await handler._handle_command("stats")
+    assert result is True
+    send_callback.assert_awaited_once_with(
+        {"type": "action", "action": "stats", "args": []}
+    )

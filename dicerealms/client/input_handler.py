@@ -49,9 +49,10 @@ class InputHandler:
         if resolved or cmd in DIRECTION_ALIASES.values():
             await self.send({
                 "type": "action",
-                "action": "move", 
+                "action": "move",
                 "args": [resolved or cmd]
             })
+            return True
 
         # Command Aliases
         cmd = COMMAND_ALIASES.get(cmd, cmd)
@@ -64,12 +65,15 @@ class InputHandler:
             dice = parts[1] if len(parts) > 1 else "1d6"
             await self.send({"type": "action", "action": "roll", "args": [dice]})
         elif cmd == "move":
-            direction = parts[1] if len(parts) > 1 else ""
+            raw_dir = parts[1] if len(parts) > 1 else ""
+            direction = DIRECTION_ALIASES.get(raw_dir.lower(), raw_dir.lower())
             await self.send({"type": "action", "action": "move", "args": [direction]})
         elif cmd == "look":
             await self.send({"type": "action", "action": "look", "args": []})
         elif cmd == "help":
             await self.send({"type": "action", "action": "help", "args": []})
+        elif cmd == "stats":
+            await self.send({"type": "action", "action": "stats", "args": []})
         else:
             self.console.print(f"[yellow]Unknown command: {cmd}[/yellow]")
 
