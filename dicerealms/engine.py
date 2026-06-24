@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 
-from dicerealms.commands import COMMAND_ALIASES, DIRECTION_ALIASES
+from dicerealms.commands import COMMAND_ALIASES, COMMANDS, DIRECTION_ALIASES
 from dicerealms.core import roll_dice
 from dicerealms.player import Player
 from dicerealms.world import World
@@ -16,7 +15,7 @@ def _render_plain(result: dict) -> str:
     if t == "look":
         exits = ", ".join(result.get("exits", []))
         return (
-            f"{result['room']}\n\n" 
+            f"{result['room']}\n\n"
             f"{result['description']}\n\n"
             f"Exits: {exits}"
         )
@@ -38,31 +37,33 @@ def _render_plain(result: dict) -> str:
         return (
             f"Name:  {result['name']}\n"
             f"Level: {result['level']} XP: {result['xp']}\n"
-            f"HP:    {result['hp']}/{result['max_hp']}"
+            f"HP:    {result['hp']}/{result['max_hp']}\n"
             f"MP:    {result['mp']}/{result['max_mp']}"
+        )
+    elif t == "who":
+        players = result.get("players", [])
+        return "Players in game:\n" + "\n".join(
+            f"  {p['name']} ({p['room']})" for p in players
+        )
+    elif t == "inspect":
+        return (
+            f"[{result['name']}]\n"
+            f"Level: {result['level']}  "
+            f"HP: {result['hp']}/{result['max_hp']}  "
+            f"MP: {result['mp']}/{result['max_mp']}"
         )
     elif t == "help":
         rows = [f"{c['name']:<8} {c['help']}" for c in result["commands"]]
-        return "Commands: \n" + "\n".join(rows)
+        return "Commands:\n" + "\n".join(rows)
     elif t in ("error", "quit", "empty"):
         return result.get("message", "")
     return str(result)
 
-@dataclass
-class Command:
-    name: str
-    help: str
-    handler: Callable[[list[str]], dict]
-
 
 class GameEngine:
     """
-    A minimal, synchronous REPL-like game engine.
-    Commands:
-        - help
-        - roll <dice>
-        - look
-        - quit
+    Single-player game engine. 
+    Commands defined in dicerealms/commands.py.
     """
 
     def __init__(
@@ -77,15 +78,17 @@ class GameEngine:
         self._output = output_fn or print
         self._world = world
         self._player = player
-        self._commands: dict[str, Command] = {
-            "help": Command("help", "Show Command List", self._cmd_help),
-            "roll": Command("roll", "Roll dice: roll 2d6+1", self._cmd_roll),
-            "look": Command("look", "Look around the current room", self._cmd_look),
-            "move": Command("move", "Move in a direction: move north", self._cmd_move),
-            "quit": Command("quit", "Quit the game", self._cmd_quit),
-            "stats": Command("stats", "Show your character stats", self._cmd_stats),
+        self._handlers: dict[str, Callable[[list[str]], dict]] = {
+            "roll":    self._cmd_roll,
+            "move":    self._cmd_move,
+            "look":    self._cmd_look,
+            "who":     self._cmd_who,
+            "inspect": self._cmd_inspect,
+            "stats":   self._cmd_stats,
+            "chat":    self._cmd_chat,
+            "help":    self._cmd_help,
+            "quit":    self._cmd_quit,
         }
-
 
     def run(self):
         self._running = True
@@ -97,11 +100,9 @@ class GameEngine:
             raw = self._input().strip()
             if not raw:
                 continue
-
             result = self.handle(raw)
             if result["type"] != "empty":
                 self._output(_render_plain(result))
-
 
     def handle(self, line: str) -> dict:
         """Handle a single command line and return the response."""
@@ -117,42 +118,27 @@ class GameEngine:
 
         # Command aliases: "l" -> "look", "q" -> "quit", etc.
         cmd = COMMAND_ALIASES.get(cmd, cmd)
-        command = self._commands.get(cmd)
-        if command:
+        handler = self._handlers.get(cmd)
+        if handler:
             try:
-                result = command.handler(args)
-                return result
+                return handler(args)
             except Exception as e:
                 return {"type": "error", "message": f"⚠️  Error: {e}"}
-        return {
-            "type": "error", 
-            "message": f"Unknown command: {cmd} (try 'help')"
-        }
-
+        return {"type": "error", "message": f"Unknown command: {cmd} (try 'help')"}
 
     # ---- command handlers ----
+
     def _cmd_help(self, _: list[str]) -> dict:
         return {
             "type": "help",
-            "commands": [{"name": c.name, "help": c.help} for c in self._commands.values()],
+            "commands": [{"name": c.name, "help": c.help} for c in COMMANDS],
         }
-
 
     def _cmd_roll(self, args: list[str]) -> dict:
         if not args:
-            return {
-                "type": "error",
-                "message": "Usage: roll <dice-expr> (e.g. 2d6+1)"
-            }
-
+            return {"type": "error", "message": "Usage: roll <dice-expr> (e.g. 2d6+1)"}
         total, parts = roll_dice(args[0])
-        return {
-            "type": "roll",
-            "expression": args[0],
-            "total": total,
-            "parts": parts
-        }
-
+        return {"type": "roll", "expression": args[0], "total": total, "parts": parts}
 
     def _cmd_look(self, _: list[str]) -> dict:
         if self._world and self._player:
@@ -164,7 +150,6 @@ class GameEngine:
                     "description": room.description,
                     "exits": sorted(room.neighbor().keys()),
                 }
-        
         return {
             "type": "look",
             "room": "Dark Room",
@@ -172,27 +157,15 @@ class GameEngine:
             "exits": ["east", "north"],
         }
 
-
     def _cmd_quit(self, _: list[str]) -> dict:
         self._running = False
-        return {
-            "type": "quit",
-            "message": "👋 Goodbye!"
-        }
-
+        return {"type": "quit", "message": "👋 Goodbye!"}
 
     def _cmd_move(self, args: list[str]) -> dict:
         if not args:
-            return {
-                "type": "error",
-                "message": "Usage: move <direction> (e.g. move north)"
-            }
+            return {"type": "error", "message": "Usage: move <direction> (e.g. move north)"}
         if not self._world or not self._player:
-            return {
-                "type": "error",
-                "message": "Cannot move: no world loaded"
-            }
-        
+            return {"type": "error", "message": "Cannot move: no world loaded."}
         direction = DIRECTION_ALIASES.get(args[0].lower(), args[0].lower())
         new_room_id, message = self._world.move(self._player.room, direction)
         if new_room_id:
@@ -205,17 +178,11 @@ class GameEngine:
                 "description": room.description if room else "",
                 "exits": sorted(room.neighbor().keys()) if room else [],
             }
-
         return {"type": "error", "message": message}
-
 
     def _cmd_stats(self, _: list[str]) -> dict:
         if not self._player:
-            return {
-                "type": "error",
-                "message": "No player loaded.",
-            }
-        
+            return {"type": "error", "message": "No player loaded."}
         p = self._player
         return {
             "type": "stats",
@@ -225,6 +192,30 @@ class GameEngine:
             "hp": p.hp,
             "max_hp": p.max_hp,
             "mp": p.mp,
-            "max_mp": p.max_mp
+            "max_mp": p.max_mp,
         }
-        
+
+    def _cmd_who(self, _: list[str]) -> dict:
+        if not self._player:
+            return {"type": "error", "message": "No player loaded."}
+        return {
+            "type": "who",
+            "players": [{"name": self._player.name, "room": self._player.room}],
+        }
+
+    def _cmd_inspect(self, args: list[str]) -> dict:
+        if not self._player:
+            return {"type": "error", "message": "No player loaded."}
+        p = self._player
+        return {
+            "type": "inspect",
+            "name": p.name,
+            "level": p.level,
+            "hp": p.hp,
+            "max_hp": p.max_hp,
+            "mp": p.mp,
+            "max_mp": p.max_mp,
+        }
+
+    def _cmd_chat(self, _: list[str]) -> dict:
+        return {"type": "error", "message": "Chat is only available in multiplayer mode."}
