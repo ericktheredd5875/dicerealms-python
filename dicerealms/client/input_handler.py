@@ -21,7 +21,7 @@ class InputHandler:
     async def run(self) -> None: # the prompt loop
         self.console.print(
             "[bold]Commands:[/bold] chat <msg>, roll <dice>, move <dir>, "
-            "look, stats, help, quit\n"
+            "look, who, inspect <name>, stats, help, quit\n"
             "[dim]Shortcuts: n/s/e/w, l=look, q=quit, h=help[/dim]"
         )
         session = PromptSession()
@@ -74,6 +74,11 @@ class InputHandler:
             await self.send({"type": "action", "action": "help", "args": []})
         elif cmd == "stats":
             await self.send({"type": "action", "action": "stats", "args": []})
+        elif cmd == "who":
+            await self.send({"type": "action", "action": "who", "args": []})
+        elif cmd == "inspect":
+            target = parts[1] if len(parts) > 1 else ""
+            await self.send({"type": "action", "action": "inspect", "args": [target]})
         else:
             self.console.print(f"[yellow]Unknown command: {cmd}[/yellow]")
 

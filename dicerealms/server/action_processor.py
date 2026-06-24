@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 
 from loguru import logger
 
+from dicerealms.commands import COMMANDS, FREE_ACTIONS
 from dicerealms.core import roll_dice
 from dicerealms.protocol.messages import (
     ActionAnnouncementMessage,
@@ -66,6 +67,23 @@ class ActionProcessor:
             }
 
         player_name = player.name
+
+        # FREE actions: skip turn validation, delay, and turn advance
+        if action.lower() in FREE_ACTIONS:
+            try:
+                result = await self._execute_action(player_id, action, args)
+                action_result: ActionResultMessage = {
+                    "type": "action_result",
+                    "player": player_name,
+                    "action": action,
+                    "result": result.get("result", ""),
+                    "details": result.get("details", {})
+                }
+                await self.broadcast(action_result)
+                return {"success": True, "result": result}
+            except Exception as e:
+                logger.error(f"FREE action error for {player_id}: {e}")
+                return {"success": False, "error": str(e)}
 
         # Validate it is the player's turn
         if not self.turn_manager.is_current_turn(player_id):
@@ -160,16 +178,16 @@ class ActionProcessor:
         action_lower = action.lower()
         if action_lower == "roll":
             return await self._execute_roll(args)
-
         elif action_lower == "move":
             return await self._execute_move(player_id, args)
-
         elif action_lower == "look":
             return await self._execute_look(player_id)
-
         elif action_lower == "stats":
             return await self._execute_stats(player_id)
-
+        elif action_lower == "who":
+            return await self._execute_who()
+        elif action_lower == "inspect":
+            return await self._execute_inspect(args)
         elif action_lower == "help":
             return await self._execute_help()
         else:
@@ -288,17 +306,54 @@ class ActionProcessor:
         }
 
 
+    async def _execute_who(self) -> dict:
+        players = [
+            {"name": p.name, "room": p.room}
+            for p in self.game_state.players.values()
+        ]
+        result = "Players in game:\n" + "\n".join(
+            f"  {p['name']} ({p['room']})" for p in players
+        )
+        return {"result": result, "details": {"players": players}}
+
+
+    async def _execute_inspect(self, args: list[str]) -> dict:
+        if not args:
+            raise ValueError("Usage: inspect <player_name>")
+        
+        target_name = args[0]
+        target = next(
+            (p for p in self.game_state.players.values()
+            if p.name.lower() == target_name.lower()),
+            None,
+        )
+        if not target:
+            raise ValueError(f"Player '{target_name}' not found.")
+        
+        result = (
+            f"[{target_name}]\n"
+            f"Level: {target.level}  "
+            f"HP: {target.hp}/{target.max_hp}  "
+            f"MP: {target.mp}/{target.max_mp}"
+        )
+        return {
+            "result": result,
+            "details": {
+                "name": target.name,
+                "level": target.level,
+                "hp": target.hp,
+                "max_hp": target.max_hp,
+                "mp": target.mp,
+                "max_mp": target.max_mp,
+            }
+        }
+
+
     async def _execute_help(self) -> dict:
         """
         Execute the view of the help menu.
         """
-        actions = [
-            ("roll", "<dice-expr> Role dice (IE: 2d6+1)"),
-            ("move", "<direction> Move in a direction (IE: north, south, east, west)"),
-            ("look", "Get a description of the current room and its contents"),
-            ("stats", "View your character stats"),
-            ("help", "View this help menu"),
-        ]
+        actions = [(c.name, c.help) for c in COMMANDS]
 
         result = "Available actions:\n" + "\n".join(f"{name:<8} {desc}" for name, desc in actions)
         return {

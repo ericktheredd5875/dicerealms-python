@@ -14,6 +14,10 @@ class SinglePlayerUI:
             return self._render_stats(result)
         elif t == "help":
             return self._render_help(result)
+        elif t == "who":
+            return self._render_who(result)
+        elif t == "inspect":
+            return self._render_inspect(result)
         elif t == "error":
             return f"[red]{result.get('message', '')}[/red]"
         elif t == "quit":
@@ -64,3 +68,21 @@ class SinglePlayerUI:
             for c in result["commands"]
         ]
         return "[bold]Commands:[/bold]\n" + "\n".join(rows)
+
+
+    def _render_who(self, result: dict) -> str:
+        players = result.get("players", [])
+        rows = [
+            f"  [cyan]{p['name']}[/cyan] [dim]({p['room']})[/dim]"
+            for p in players
+        ]
+        return "[bold]Players in game:[/bold]\n" + "\n".join(rows)
+
+
+    def _render_inspect(self, result: dict) -> str:
+        return (
+            f"[bold]{result['name']}[/bold]\n"
+            f"Level [bold]{result['level']}[/bold]\n\n"
+            f"HP  [green]{result['hp']}/{result['max_hp']}[/green]\n"
+            f"MP  [blue]{result['mp']}/{result['max_mp']}[/blue]"
+        )
